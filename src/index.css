@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Android touch tap highlight reset */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: #0d0d0d;
+  color: #ffffff;
+  overscroll-behavior-y: none;
+  user-select: none;
+}
+

@@ -1,0 +1,8 @@
+{
+  "name": "UniHack Ledger",
+  "description": "A modern, minimalist hackathon management platform for universities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
