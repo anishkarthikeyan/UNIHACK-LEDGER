@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: unihack-ledger-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: unihack_ledger
+      POSTGRES_USER: unihack
+      POSTGRES_PASSWORD: unihack_local_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+
+volumes:
+  postgres_data:

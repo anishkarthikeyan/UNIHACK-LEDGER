@@ -20,6 +20,7 @@ import {
   PlusCircle,
   Sparkles
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,10 +30,18 @@ interface LayoutProps {
   onLogout: () => void;
 }
 
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '');
+}
+
 export default function Layout({ children, activeTab, setActiveTab, role, onLogout }: LayoutProps) {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const displayName = user?.full_name ?? 'Guest';
+  const initials = (initialsOf(displayName) || 'U').toUpperCase();
 
   const getNavItems = () => {
     if (role === 'student') {
@@ -150,11 +159,11 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
         {/* User Card in Mobile Drawer */}
         <div className="p-4 mx-3 my-3 bg-neutral-800/60 rounded-2xl border border-neutral-700/50 flex items-center gap-3">
           <div className="w-10 h-10 bg-yellow-400 text-black font-black rounded-full flex items-center justify-center text-sm shadow-md shrink-0">
-            {role === 'student' ? 'AK' : role === 'faculty' ? 'DR' : 'AD'}
+            {initials}
           </div>
           <div className="overflow-hidden">
             <p className="font-black uppercase tracking-wider text-xs text-white truncate">
-              {role === 'student' ? 'Anish K.' : role === 'faculty' ? 'Dr. Meena R.' : 'System Admin'}
+              {displayName}
             </p>
             <p className="text-yellow-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
               <Sparkles size={10} /> {role} Account
@@ -302,11 +311,11 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
                 onClick={() => setActiveTab('profile')}
                 className="w-9 h-9 bg-yellow-400 text-black font-black rounded-full flex items-center justify-center text-xs shadow-md ring-2 ring-yellow-400/30 hover:scale-105 transition-transform"
               >
-                {role === 'student' ? 'AK' : role === 'faculty' ? 'DR' : 'AD'}
+                {initials}
               </button>
               <div className="hidden lg:block text-left">
                 <p className="font-black uppercase tracking-wider text-xs text-white leading-tight">
-                  {role === 'student' ? 'Anish K.' : role === 'faculty' ? 'Dr. Meena R.' : 'System Admin'}
+                  {displayName}
                 </p>
                 <p className="text-neutral-400 text-[10px] uppercase font-bold tracking-widest">
                   {role} portal

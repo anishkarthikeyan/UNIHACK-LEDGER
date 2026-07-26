@@ -1,36 +1,91 @@
-import React from 'react';
-import { Search, Filter, Edit2, Copy, Trash2, MoreVertical, Eye } from 'lucide-react';
-import { Hackathon } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Search, Loader2, CheckCircle2 } from 'lucide-react';
+import { api, ApiError } from '../lib/api';
+import type { Hackathon } from '../types';
+import type { NavigateFn } from '../App';
 
-const MOCK_HACKATHONS: Hackathon[] = [
-  { id: '1', name: 'Code for Good 2025', status: 'Active', regCloseDate: '25 May 2025', currentRound: 'Round 1: Ideation', interested: 320, registered: 180, lastUpdated: '' },
-  { id: '2', name: 'AI Innovate 5.0', status: 'Active', regCloseDate: '02 Jun 2025', currentRound: 'Round 1: Ideation', interested: 210, registered: 120, lastUpdated: '' },
-  { id: '3', name: 'Web3 Buildathon', status: 'Upcoming', regCloseDate: '10 Jun 2025', currentRound: 'Upcoming', interested: 150, registered: 45, lastUpdated: '' },
-  { id: '4', name: 'HealthHack 2025', status: 'Active', regCloseDate: '28 May 2025', currentRound: 'Round 2: Prototype', interested: 190, registered: 110, lastUpdated: '' },
-  { id: '5', name: 'DataVerse Challenge', status: 'Upcoming', regCloseDate: '05 Jun 2025', currentRound: 'Upcoming', interested: 240, registered: 90, lastUpdated: '' },
-  { id: '6', name: 'SecureFuture Hack', status: 'Active', regCloseDate: '20 May 2025', currentRound: 'Final Round', interested: 180, registered: 95, lastUpdated: '' },
-];
+interface ManageHackathonsProps {
+  onNavigate?: NavigateFn;
+}
 
-export default function ManageHackathons() {
+const STATUS_TABS = ['All', 'draft', 'published', 'registration_closed', 'ongoing', 'completed'];
+
+export default function ManageHackathons({ onNavigate }: ManageHackathonsProps) {
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [activeStatus, setActiveStatus] = useState('All');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editClosesAt, setEditClosesAt] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    api.hackathons.list(search)
+      .then((rows) => { setHackathons(rows); setError(null); })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load hackathons.'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [search]);
+
+  const editingHackathon = hackathons.find((h) => h.id === editingId) ?? null;
+
+  const startEdit = (h: Hackathon) => {
+    setEditingId(h.id);
+    setEditClosesAt(new Date(h.registration_closes_at).toISOString().slice(0, 16));
+    setSaved(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editingHackathon) return;
+    setSaving(true);
+    try {
+      await api.hackathons.update(editingHackathon.id, { registrationClosesAt: new Date(editClosesAt).toISOString() });
+      setSaved(true);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to save changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const closeRegistration = async (h: Hackathon) => {
+    try {
+      await api.hackathons.update(h.id, { status: 'registration_closed' });
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to close registration.');
+    }
+  };
+
+  const filtered = hackathons.filter((h) => activeStatus === 'All' || h.status === activeStatus);
+  const countFor = (status: string) => status === 'All' ? hackathons.length : hackathons.filter((h) => h.status === status).length;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Published Hackathons</h1>
-        <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Manage approved and published events</p>
+        <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Manage Hackathons</h1>
+        <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Manage draft, published, and archived events</p>
       </div>
 
+      {error && <p className="text-red-400 text-xs font-bold uppercase tracking-widest">{error}</p>}
+
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Main List Area */}
         <div className="flex-1 space-y-4">
           <div className="flex items-center gap-4 border-b border-neutral-800 overflow-x-auto pb-1 scrollbar-hide">
-            {['All (12)', 'Open (3)', 'Upcoming (4)', 'Ongoing (3)', 'Ended (2)', 'Deadline Soon (5)'].map((tab, i) => (
-              <button 
-                key={tab}
+            {STATUS_TABS.map((status) => (
+              <button
+                key={status}
+                onClick={() => setActiveStatus(status)}
                 className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors whitespace-nowrap rounded-full ${
-                  i === 0 ? 'bg-yellow-400 text-white' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-neutral-700'
+                  activeStatus === status ? 'bg-yellow-400 text-white' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-neutral-700'
                 }`}
               >
-                {tab}
+                {status === 'All' ? 'All' : status.replace(/_/g, ' ')} ({countFor(status)})
               </button>
             ))}
           </div>
@@ -38,112 +93,89 @@ export default function ManageHackathons() {
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" />
-              <input 
-                type="text" 
-                placeholder="Search hackathons..." 
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search hackathons..."
                 className="w-full pl-11 pr-4 py-3 bg-black border border-neutral-800 rounded-full focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 text-sm outline-none text-white placeholder-neutral-500 transition-all"
               />
             </div>
-            <button className="px-4 py-3 bg-black border border-neutral-800 rounded-full hover:border-yellow-400 hover:text-yellow-400 text-white flex items-center justify-center transition-colors">
-              <Filter size={18} />
-            </button>
           </div>
 
           <div className="bg-black rounded-[32px] border-4 border-neutral-800 shadow-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-black/50 text-neutral-400 font-bold text-[10px] uppercase tracking-widest">
-                  <tr>
-                    <th className="px-6 py-4 border-b border-neutral-800">Hackathon Name</th>
-                    <th className="px-6 py-4 border-b border-neutral-800 text-center">Status</th>
-                    <th className="px-6 py-4 border-b border-neutral-800">Reg. Close Date</th>
-                    <th className="px-6 py-4 border-b border-neutral-800">Current Round</th>
-                    <th className="px-6 py-4 border-b border-neutral-800 text-center">Interested</th>
-                    <th className="px-6 py-4 border-b border-neutral-800 text-center">Registered</th>
-                    <th className="px-6 py-4 border-b border-neutral-800 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-800 text-white">
-                  {MOCK_HACKATHONS.map((h) => (
-                    <tr key={h.id} className="hover:bg-neutral-700 transition-colors">
-                      <td className="px-6 py-4 font-bold">{h.name}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                          h.status === 'Active' ? 'bg-yellow-400 text-white' : 'bg-neutral-800 text-neutral-300'
-                        }`}>
-                          {h.status === 'Active' ? 'Open' : h.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-neutral-400 font-mono text-xs">{h.regCloseDate}</td>
-                      <td className="px-6 py-4 text-neutral-400 text-xs font-bold uppercase tracking-wider">{h.currentRound}</td>
-                      <td className="px-6 py-4 text-center text-neutral-400 font-mono">{h.interested}</td>
-                      <td className="px-6 py-4 text-center font-bold text-yellow-400 font-mono">{h.registered}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-4 text-neutral-500">
-                          <button className="hover:text-yellow-400 transition-colors"><Edit2 size={16} /></button>
-                          <button className="hover:text-yellow-400 transition-colors"><Copy size={16} /></button>
-                          <button className="hover:text-yellow-400 transition-colors"><MoreVertical size={16} /></button>
-                        </div>
-                      </td>
+            {loading ? (
+              <div className="flex items-center justify-center py-16 text-neutral-500"><Loader2 className="animate-spin" /></div>
+            ) : filtered.length === 0 ? (
+              <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest text-center py-16">No hackathons found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-black/50 text-neutral-400 font-bold text-[10px] uppercase tracking-widest">
+                    <tr>
+                      <th className="px-6 py-4 border-b border-neutral-800">Hackathon Name</th>
+                      <th className="px-6 py-4 border-b border-neutral-800 text-center">Status</th>
+                      <th className="px-6 py-4 border-b border-neutral-800">Reg. Close Date</th>
+                      <th className="px-6 py-4 border-b border-neutral-800 text-center">Interested</th>
+                      <th className="px-6 py-4 border-b border-neutral-800 text-center">Registered</th>
+                      <th className="px-6 py-4 border-b border-neutral-800 text-center">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-4 border-t border-neutral-800 flex items-center justify-between bg-black/30 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-              <span>Showing 1 to 6 of 12</span>
-              <div className="flex gap-2">
-                <button className="w-8 h-8 flex items-center justify-center rounded-full border border-neutral-700 hover:border-yellow-400 hover:text-white transition-colors">&lt;</button>
-                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-yellow-400 text-white font-black">1</button>
-                <button className="w-8 h-8 flex items-center justify-center rounded-full border border-neutral-700 hover:border-yellow-400 hover:text-white transition-colors">2</button>
-                <button className="w-8 h-8 flex items-center justify-center rounded-full border border-neutral-700 hover:border-yellow-400 hover:text-white transition-colors">&gt;</button>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800 text-white">
+                    {filtered.map((h) => (
+                      <tr key={h.id} className="hover:bg-neutral-700 transition-colors">
+                        <td className="px-6 py-4 font-bold cursor-pointer hover:text-yellow-400" onClick={() => onNavigate?.('hackathons-detail', h.id)}>{h.title}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                            h.status === 'published' ? 'bg-yellow-400 text-white' : 'bg-neutral-800 text-neutral-300'
+                          }`}>
+                            {h.status.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-neutral-400 font-mono text-xs">{new Date(h.registration_closes_at).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-center text-neutral-400 font-mono">{h.interested_count}</td>
+                        <td className="px-6 py-4 text-center font-bold text-yellow-400 font-mono">{h.registered_count}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-3 text-neutral-500">
+                            <button onClick={() => startEdit(h)} className="text-[10px] font-bold uppercase tracking-widest hover:text-yellow-400 transition-colors">Edit</button>
+                            {h.status === 'published' && (
+                              <button onClick={() => closeRegistration(h)} className="text-[10px] font-bold uppercase tracking-widest hover:text-yellow-400 transition-colors">Close Reg.</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Quick Edit Sidebar */}
         <div className="w-full lg:w-[360px] space-y-4">
           <div className="bg-black rounded-[32px] border-4 border-neutral-800 shadow-xl overflow-hidden flex flex-col text-white">
             <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-black">
               <h3 className="font-black text-lg tracking-tight uppercase">Quick Edit</h3>
-              <button className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-700 transition-colors">&times;</button>
+              {editingId && (
+                <button onClick={() => setEditingId(null)} className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-700 transition-colors">&times;</button>
+              )}
             </div>
-            
-            <div className="p-6 space-y-6">
-              <div className="flex bg-neutral-800 rounded-full p-1 text-[10px] font-bold uppercase tracking-widest">
-                <button className="bg-neutral-900 text-white-TMP py-2 px-4 rounded-full flex-1 shadow-sm text-center">Details</button>
-                <button className="text-neutral-500 hover:text-white py-2 px-4 rounded-full flex-1 text-center transition-colors">Round</button>
-                <button className="text-neutral-500 hover:text-white py-2 px-4 rounded-full flex-1 text-center transition-colors">Notify</button>
-              </div>
 
-              <div className="space-y-4">
+            {!editingHackathon ? (
+              <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest text-center py-12 px-6">Select "Edit" on a hackathon to update it here.</p>
+            ) : (
+              <div className="p-6 space-y-6">
+                <p className="text-sm font-black text-yellow-400">{editingHackathon.title}</p>
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-400">Registration Last Date</label>
-                  <input type="text" defaultValue="25/05/2025" className="w-full px-4 py-3 bg-black border-2 border-neutral-800 rounded-xl text-sm font-mono font-bold outline-none focus:border-white transition-colors" />
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-400">Registration Closes</label>
+                  <input type="datetime-local" value={editClosesAt} onChange={(e) => setEditClosesAt(e.target.value)} className="w-full px-4 py-3 bg-black border-2 border-neutral-800 rounded-xl text-sm font-mono font-bold outline-none focus:border-white transition-colors" />
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-400">Round 1 Date</label>
-                  <input type="text" defaultValue="18/05/2025" className="w-full px-4 py-3 bg-black border-2 border-neutral-800 rounded-xl text-sm font-mono font-bold outline-none focus:border-white transition-colors" />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-400">Final Demo Date</label>
-                  <input type="text" defaultValue="08/06/2025" className="w-full px-4 py-3 bg-black border-2 border-neutral-800 rounded-xl text-sm font-mono font-bold outline-none focus:border-white transition-colors" />
-                </div>
-              </div>
-
-              <div className="pt-6 border-t border-neutral-100 space-y-3">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-400">Post Announcement</label>
-                <textarea 
-                  rows={3}
-                  placeholder="Write an announcement..."
-                  className="w-full px-4 py-3 bg-black border-2 border-neutral-800 rounded-xl text-sm font-medium outline-none focus:border-white transition-colors resize-none"
-                ></textarea>
-                <button className="w-full py-4 bg-neutral-900 text-yellow-400 rounded-full font-bold text-[10px] uppercase tracking-widest hover:scale-[0.98] transition-transform">
-                  Post Announcement
+                <button onClick={saveEdit} disabled={saving} className="w-full py-4 bg-yellow-400 text-white rounded-full font-bold text-[10px] uppercase tracking-widest hover:scale-[0.98] transition-transform disabled:opacity-60 flex items-center justify-center gap-2">
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : null}
+                  {saved ? 'Saved' : 'Save Changes'}
                 </button>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

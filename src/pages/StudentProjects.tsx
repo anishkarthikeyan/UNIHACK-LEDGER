@@ -1,62 +1,44 @@
-import React, { useState } from 'react';
-import { Briefcase, Users, User, CheckCircle2, FileEdit, Search, Filter, Plus, Github, ExternalLink, Clock, Folder } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Briefcase, Users, User, CheckCircle2, FileEdit, Search, Plus, Github, ExternalLink, Clock, Folder, Loader2 } from 'lucide-react';
+import { api } from '../lib/api';
+import type { Project } from '../types';
+import type { NavigateFn } from '../App';
 
 interface StudentProjectsProps {
-  onNavigate?: (route: string) => void;
+  onNavigate?: NavigateFn;
 }
 
 export default function StudentProjects({ onNavigate }: StudentProjectsProps) {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('All Projects');
-  
-  const projects = [
-    { 
-      title: 'HealthSync App', 
-      hackathon: 'HealthHack 2024', 
-      type: 'Team', 
-      status: 'Published',
-      updated: '10 Jan 2025',
-      hasGithub: true,
-      hasDemo: true,
-      desc: 'A decentralized health records management system built with React and Solidity.'
-    },
-    { 
-      title: 'EcoTrack Dashboard', 
-      hackathon: 'Code for Good 2024', 
-      type: 'Team', 
-      status: 'Published',
-      updated: '15 Dec 2024',
-      hasGithub: true,
-      hasDemo: false,
-      desc: 'Real-time carbon footprint tracker for university campuses.'
-    },
-    { 
-      title: 'AI Study Assistant', 
-      hackathon: 'AI Innovate 4.0', 
-      type: 'Solo', 
-      status: 'Draft',
-      updated: '05 May 2025',
-      hasGithub: false,
-      hasDemo: false,
-      desc: 'Personalized study path generator using Gemini API.'
-    },
-    { 
-      title: 'Campus Navigate UI', 
-      hackathon: 'Designathon 2024', 
-      type: 'Team', 
-      status: 'Draft',
-      updated: '12 Apr 2025',
-      hasGithub: true,
-      hasDemo: true,
-      desc: 'Figma prototypes and frontend implementation for campus indoor navigation.'
-    }
-  ];
+  const [search, setSearch] = useState('');
 
-  const filteredProjects = projects.filter(p => {
-    if (filter === 'All Projects') return true;
-    if (filter === 'Team' || filter === 'Solo') return p.type === filter;
-    if (filter === 'Published' || filter === 'Drafts') return p.status === (filter === 'Drafts' ? 'Draft' : 'Published');
+  useEffect(() => {
+    api.projects.mine()
+      .then(setProjects)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load projects.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filteredProjects = projects.filter((p) => {
+    if (filter === 'Team' && p.participation_mode !== 'team') return false;
+    if (filter === 'Solo' && p.participation_mode !== 'solo') return false;
+    if (filter === 'Public' && p.visibility !== 'public') return false;
+    if (filter === 'Private' && p.visibility !== 'private') return false;
+    if (search && !p.title.toLowerCase().includes(search.toLowerCase()) && !(p.hackathon_title ?? '').toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  const teamCount = projects.filter((p) => p.participation_mode === 'team').length;
+  const soloCount = projects.filter((p) => p.participation_mode === 'solo').length;
+  const publicCount = projects.filter((p) => p.visibility === 'public').length;
+  const privateCount = projects.filter((p) => p.visibility === 'private').length;
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-20 text-neutral-500"><Loader2 className="animate-spin" /></div>;
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -70,18 +52,19 @@ export default function StudentProjects({ onNavigate }: StudentProjectsProps) {
         </button>
       </div>
 
-      {/* Summary Cards */}
+      {error && <p className="text-red-400 text-xs font-bold uppercase tracking-widest">{error}</p>}
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: 'Total Projects', value: '4', icon: Folder, highlight: true },
-          { label: 'Team Projects', value: '3', icon: Users, highlight: false },
-          { label: 'Solo Projects', value: '1', icon: User, highlight: false },
-          { label: 'Published', value: '2', icon: CheckCircle2, highlight: false },
-          { label: 'Drafts', value: '2', icon: FileEdit, highlight: false },
-        ].map((stat, i) => (
-          <div key={i} className={`${stat.highlight ? 'bg-yellow-400 text-white border-yellow-400' : 'bg-black text-white border-neutral-800'} p-5 rounded-3xl border-2 shadow-lg flex flex-col justify-between h-32`}>
+          { label: 'Total Projects', value: projects.length, icon: Folder, highlight: true },
+          { label: 'Team Projects', value: teamCount, icon: Users, highlight: false },
+          { label: 'Solo Projects', value: soloCount, icon: User, highlight: false },
+          { label: 'Public', value: publicCount, icon: CheckCircle2, highlight: false },
+          { label: 'Private', value: privateCount, icon: FileEdit, highlight: false },
+        ].map((stat) => (
+          <div key={stat.label} className={`${stat.highlight ? 'bg-yellow-400 text-white border-yellow-400' : 'bg-black text-white border-neutral-800'} p-5 rounded-3xl border-2 shadow-lg flex flex-col justify-between h-32`}>
             <div className="flex justify-between items-start">
-               <div className={`p-2 rounded-xl ${stat.highlight ? 'bg-neutral-900 text-yellow-400' : 'bg-neutral-800 text-white'}`}>
+              <div className={`p-2 rounded-xl ${stat.highlight ? 'bg-neutral-900 text-yellow-400' : 'bg-neutral-800 text-white'}`}>
                 <stat.icon size={20} />
               </div>
               <p className="text-3xl font-black leading-none font-mono">{stat.value}</p>
@@ -91,91 +74,87 @@ export default function StudentProjects({ onNavigate }: StudentProjectsProps) {
         ))}
       </div>
 
-      {/* Search and Filters */}
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="relative flex-1">
           <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-500" />
-          <input 
-            type="text" 
-            placeholder="Search projects by name, hackathon, or tech stack..." 
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search projects by name or hackathon..."
             className="w-full pl-14 pr-6 py-4 bg-black border-4 border-neutral-800 rounded-full focus:border-yellow-400 focus:bg-neutral-900 text-sm outline-none text-white placeholder-neutral-500 font-bold transition-all"
           />
         </div>
-        <button className="px-8 py-4 bg-neutral-900 text-white-TMP border-4 border-white rounded-full hover:bg-neutral-700 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-colors shrink-0">
-          <Filter size={18} /> Filters
-        </button>
       </div>
 
-      {/* Filter Chips */}
       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-         {['All Projects', 'Team', 'Solo', 'Published', 'Drafts'].map((tab) => (
-           <button 
-             key={tab}
-             onClick={() => setFilter(tab)}
-             className={`px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors shrink-0 ${
-               filter === tab 
-                 ? 'bg-neutral-900 text-white-TMP border-2 border-white' 
-                 : 'bg-black border-2 border-neutral-800 text-neutral-400 hover:border-white hover:text-white'
-             }`}
-           >
-             {tab}
-           </button>
-         ))}
-      </div>
-
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-        {filteredProjects.map((project, i) => (
-          <div key={i} className="bg-black rounded-[32px] border-4 border-neutral-800 p-6 flex flex-col hover:border-yellow-400 transition-colors group">
-            <div className="flex justify-between items-start mb-4">
-              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                project.status === 'Published' ? 'bg-yellow-400 text-white border border-yellow-500' : 'bg-neutral-800 text-white border border-neutral-700'
-              }`}>
-                {project.status}
-              </span>
-              <span className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                {project.type}
-              </span>
-            </div>
-            
-            <h3 className="text-xl font-black leading-tight mb-2 group-hover:text-yellow-400 transition-colors cursor-pointer" onClick={() => onNavigate?.('project-detail')}>{project.title}</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-4">{project.hackathon}</p>
-            
-            <p className="text-sm text-neutral-400 mb-6 line-clamp-2">{project.desc}</p>
-            
-            <div className="flex items-center gap-4 mb-6">
-              {project.hasGithub ? (
-                <button className="text-neutral-400 hover:text-white transition-colors" title="GitHub Repository">
-                  <Github size={20} />
-                </button>
-              ) : (
-                <div className="text-neutral-700" title="No GitHub Link">
-                  <Github size={20} />
-                </div>
-              )}
-              {project.hasDemo ? (
-                <button className="text-neutral-400 hover:text-white transition-colors" title="Live Demo">
-                  <ExternalLink size={20} />
-                </button>
-              ) : (
-                <div className="text-neutral-700" title="No Live Demo">
-                  <ExternalLink size={20} />
-                </div>
-              )}
-            </div>
-
-            <div className="mt-auto pt-4 border-t border-neutral-800 flex items-center justify-between">
-               <div className="flex items-center gap-2 text-neutral-500">
-                 <Clock size={14} />
-                 <span className="text-[10px] font-bold uppercase tracking-widest">{project.updated}</span>
-               </div>
-               <button onClick={() => onNavigate?.('project-add')} className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center text-white hover:border-yellow-400 transition-colors">
-                 <FileEdit size={14} />
-               </button>
-            </div>
-          </div>
+        {['All Projects', 'Team', 'Solo', 'Public', 'Private'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setFilter(tab)}
+            className={`px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors shrink-0 ${
+              filter === tab
+                ? 'bg-neutral-900 text-white border-2 border-white'
+                : 'bg-black border-2 border-neutral-800 text-neutral-400 hover:border-white hover:text-white'
+            }`}
+          >
+            {tab}
+          </button>
         ))}
       </div>
+
+      {filteredProjects.length === 0 ? (
+        <p className="text-neutral-500 text-sm font-bold uppercase tracking-widest text-center py-20 flex items-center justify-center gap-2"><Briefcase size={16} /> No projects yet.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+          {filteredProjects.map((project) => (
+            <div key={project.id} className="bg-black rounded-[32px] border-4 border-neutral-800 p-6 flex flex-col hover:border-yellow-400 transition-colors group">
+              <div className="flex justify-between items-start mb-4">
+                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  project.visibility === 'public' ? 'bg-yellow-400 text-white border border-yellow-500' : 'bg-neutral-800 text-white border border-neutral-700'
+                }`}>
+                  {project.visibility}
+                </span>
+                <span className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                  {project.participation_mode}
+                </span>
+              </div>
+
+              <h3 className="text-xl font-black leading-tight mb-2 group-hover:text-yellow-400 transition-colors cursor-pointer" onClick={() => onNavigate?.('project-detail', project.id)}>{project.title}</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-4">{project.hackathon_title ?? 'No linked hackathon'}</p>
+
+              <p className="text-sm text-neutral-400 mb-6 line-clamp-2">{project.description}</p>
+
+              <div className="flex items-center gap-4 mb-6">
+                {project.github_url ? (
+                  <a href={project.github_url} target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-white transition-colors" title="GitHub Repository">
+                    <Github size={20} />
+                  </a>
+                ) : (
+                  <div className="text-neutral-700" title="No GitHub Link"><Github size={20} /></div>
+                )}
+                {project.demo_url ? (
+                  <a href={project.demo_url} target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-white transition-colors" title="Live Demo">
+                    <ExternalLink size={20} />
+                  </a>
+                ) : (
+                  <div className="text-neutral-700" title="No Live Demo"><ExternalLink size={20} /></div>
+                )}
+              </div>
+
+              <div className="mt-auto pt-4 border-t border-neutral-800 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-neutral-500">
+                  <Clock size={14} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{new Date(project.updated_at).toLocaleDateString()}</span>
+                </div>
+                <button onClick={() => onNavigate?.('project-detail', project.id)} className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center text-white hover:border-yellow-400 transition-colors">
+                  <FileEdit size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

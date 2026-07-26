@@ -37,50 +37,67 @@ import AdminUserManagement from './pages/AdminUserManagement';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import AdminSystemSettings from './pages/AdminSystemSettings';
 import AdminProfileSettings from './pages/AdminProfileSettings';
+import { useAuth } from './context/AuthContext';
 
-
+export type NavigateFn = (route: string, id?: string) => void;
 
 export default function App() {
-  const [role, setRole] = useState<'student' | 'faculty' | 'admin' | null>(null);
+  const { user, loading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  
-  if (!role) {
-    return <Login onLogin={(r) => { setRole(r); setActiveTab('dashboard'); }} />;
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+
+  const onNavigate: NavigateFn = (route, id) => {
+    setActiveTab(route);
+    setSelectedId(id);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-neutral-500 text-xs font-bold uppercase tracking-widest">
+        Loading…
+      </div>
+    );
   }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  const role = user.role;
 
   const renderContent = () => {
     if (role === 'student') {
       switch (activeTab) {
         case 'dashboard':
-          return <StudentDashboard onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentDashboard onNavigate={onNavigate} />;
         case 'explore':
-          return <ExploreHackathons onNavigate={(route) => setActiveTab(route)} />;
+          return <ExploreHackathons onNavigate={onNavigate} />;
         case 'pipeline':
-          return <StudentPipeline onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentPipeline onNavigate={onNavigate} />;
         case 'teams':
-          return <StudentTeams onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentTeams onNavigate={onNavigate} />;
         case 'team-form':
-          return <StudentTeamForm onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentTeamForm onNavigate={onNavigate} />;
         case 'calendar':
           return <StudentCalendar />;
         case 'notifications':
-          return <StudentNotifications onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentNotifications onNavigate={onNavigate} />;
         case 'projects':
-          return <StudentProjects onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentProjects onNavigate={onNavigate} />;
         case 'project-add':
-          return <StudentProjectForm onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentProjectForm onNavigate={onNavigate} />;
         case 'project-detail':
-          return <StudentProjectDetail onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentProjectDetail onNavigate={onNavigate} projectId={selectedId} />;
         case 'hackathon-detail':
-          return <StudentHackathonDetail onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentHackathonDetail onNavigate={onNavigate} hackathonId={selectedId} />;
         case 'hackathon-register':
-          return <StudentRegistration onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentRegistration onNavigate={onNavigate} hackathonId={selectedId} />;
         case 'showcase':
-          return <StudentShowcase onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentShowcase onNavigate={onNavigate} />;
         case 'achievements':
           return <StudentAchievements />;
         case 'suggest':
-          return <StudentSuggestHackathon onNavigate={(route) => setActiveTab(route)} />;
+          return <StudentSuggestHackathon onNavigate={onNavigate} />;
         case 'profile':
           return <StudentProfileSettings />;
         default:
@@ -97,40 +114,34 @@ export default function App() {
     if (role === 'faculty') {
       switch (activeTab) {
         case 'dashboard':
-          return <Dashboard />;
+          return <Dashboard onNavigate={onNavigate} />;
         case 'hackathons':
           return (
             <div className="space-y-4">
               <div className="flex gap-4 mb-4">
-                <button 
-                  onClick={() => setActiveTab('hackathons-add')}
+                <button
+                  onClick={() => onNavigate('hackathons-add')}
                   className="px-6 py-3 bg-yellow-400 text-white font-bold uppercase tracking-widest text-[10px] rounded-full hover:scale-95 transition-transform shadow-lg"
                 >
-                  + Add Hackathon (Demo link)
-                </button>
-                 <button 
-                  onClick={() => setActiveTab('hackathons-detail')}
-                  className="px-6 py-3 bg-black border-2 border-neutral-800 text-white font-bold uppercase tracking-widest text-[10px] rounded-full hover:border-yellow-400 transition-colors shadow-lg"
-                >
-                  View Detail Page (Demo link)
+                  + Add Hackathon
                 </button>
               </div>
-              <ManageHackathons />
+              <ManageHackathons onNavigate={onNavigate} />
             </div>
           );
         case 'hackathons-add':
             return (
               <div className="space-y-4">
-                <button 
-                  onClick={() => setActiveTab('hackathons')}
+                <button
+                  onClick={() => onNavigate('hackathons')}
                   className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-4 flex items-center gap-2 transition-colors"
                 >
                   &larr; Back to Manage
                 </button>
-                <AddHackathon />
+                <AddHackathon onNavigate={onNavigate} />
               </div>
             );
-        
+
         case 'participants':
           return <FacultyParticipants />;
         case 'teams':
@@ -151,13 +162,13 @@ export default function App() {
         case 'hackathons-detail':
             return (
               <div className="space-y-4">
-                <button 
-                  onClick={() => setActiveTab('hackathons')}
+                <button
+                  onClick={() => onNavigate('hackathons')}
                   className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-4 flex items-center gap-2 transition-colors"
                 >
                   &larr; Back to Manage
                 </button>
-                <HackathonDetail />
+                <HackathonDetail hackathonId={selectedId} onNavigate={onNavigate} />
               </div>
             );
         default:
@@ -174,7 +185,7 @@ export default function App() {
 if (role === 'admin') {
       switch (activeTab) {
         case 'dashboard':
-          return <AdminDashboard />;
+          return <AdminDashboard onNavigate={onNavigate} />;
         case 'users':
           return <AdminUserManagement />;
         case 'audit':
@@ -196,10 +207,8 @@ if (role === 'admin') {
   };
 
   return (
-    <Layout role={role} activeTab={activeTab.startsWith('hackathons') ? 'hackathons' : activeTab} setActiveTab={setActiveTab} onLogout={() => setRole(null)}>
+    <Layout role={role} activeTab={activeTab.startsWith('hackathons') ? 'hackathons' : activeTab} setActiveTab={onNavigate} onLogout={logout}>
       {renderContent()}
     </Layout>
   );
 }
-
-
