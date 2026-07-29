@@ -285,6 +285,82 @@ CREATE INDEX notifications_recipient_idx ON notifications (recipient_id, read_at
 CREATE INDEX audit_logs_created_idx ON audit_logs (created_at DESC);
 CREATE INDEX hackathon_interests_student_idx ON hackathon_interests (student_id);
 
+-- ---------------------------------------------------------------------------
+-- Competition dataset support (see database/migrations/0001_competition_dataset.sql
+-- for the same DDL applied idempotently to existing databases via `npm run db:migrate`).
+-- ---------------------------------------------------------------------------
+ALTER TABLE hackathons ALTER COLUMN registration_closes_at DROP NOT NULL;
+
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS external_ref TEXT UNIQUE;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS external_status TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS external_registered_teams INTEGER CHECK (external_registered_teams >= 0);
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS external_registered_students INTEGER CHECK (external_registered_students >= 0);
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS source TEXT;
+
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS short_description TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS registration_url TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS banner_image_url TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS brochure_url TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS country TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS contact_name TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS contact_email TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS contact_phone TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS faq TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS rules TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS judging_criteria TEXT;
+ALTER TABLE hackathons ADD COLUMN IF NOT EXISTS problem_statements TEXT;
+
+CREATE TABLE hackathon_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE hackathon_category_links (
+  hackathon_id UUID NOT NULL REFERENCES hackathons(id) ON DELETE CASCADE,
+  category_id UUID NOT NULL REFERENCES hackathon_categories(id) ON DELETE CASCADE,
+  PRIMARY KEY (hackathon_id, category_id)
+);
+
+CREATE TABLE organizers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE hackathon_organizers (
+  hackathon_id UUID NOT NULL REFERENCES hackathons(id) ON DELETE CASCADE,
+  organizer_id UUID NOT NULL REFERENCES organizers(id) ON DELETE CASCADE,
+  PRIMARY KEY (hackathon_id, organizer_id)
+);
+
+CREATE TABLE hackathon_eligibility (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hackathon_id UUID NOT NULL REFERENCES hackathons(id) ON DELETE CASCADE,
+  year SMALLINT CHECK (year BETWEEN 1 AND 8),
+  label TEXT,
+  CHECK ((year IS NOT NULL) <> (label IS NOT NULL))
+);
+
+CREATE UNIQUE INDEX hackathon_eligibility_year_uk ON hackathon_eligibility (hackathon_id, year) WHERE year IS NOT NULL;
+CREATE UNIQUE INDEX hackathon_eligibility_label_uk ON hackathon_eligibility (hackathon_id, label) WHERE label IS NOT NULL;
+
+CREATE TABLE hackathon_bookmarks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  hackathon_id UUID NOT NULL REFERENCES hackathons(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, hackathon_id)
+);
+
+CREATE INDEX hackathon_bookmarks_user_idx ON hackathon_bookmarks (user_id);
+
+CREATE TABLE schema_migrations (
+  name TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO schema_migrations (name) VALUES ('0001_competition_dataset.sql');
+
 -- Demo password for every seeded account: Demo@123. Replace these with SSO-provisioned accounts in production.
 INSERT INTO departments (code, name) VALUES ('CSE', 'Computer Science and Engineering'), ('IT', 'Information Technology'), ('ECE', 'Electronics and Communication Engineering');
 INSERT INTO users (institutional_id, email, password_hash, full_name, role, department_id)
