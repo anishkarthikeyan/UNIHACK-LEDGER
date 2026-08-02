@@ -9,6 +9,8 @@
     "api:dev": "tsx watch server/index.ts",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
+    "db:migrate": "tsx database/migrate.ts",
+    "db:import:competitions": "tsx database/import-competitions.ts",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",

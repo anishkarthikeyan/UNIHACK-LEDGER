@@ -107,6 +107,11 @@ export const api = {
     registrations: (id: string) => get<Registration[]>(`/hackathons/${id}/registrations`),
     markInterested: (id: string) => post<void>(`/hackathons/${id}/interest`),
     removeInterest: (id: string) => del<void>(`/hackathons/${id}/interest`),
+    bookmark: (id: string) => post<void>(`/hackathons/${id}/bookmark`),
+    removeBookmark: (id: string) => del<void>(`/hackathons/${id}/bookmark`),
+  },
+  bookmarks: {
+    mine: () => get<Hackathon[]>('/bookmarks/mine'),
   },
   teams: {
     mine: () => get<Team[]>('/teams/mine'),

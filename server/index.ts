@@ -74,29 +74,76 @@ app.get('/auth/me', authenticate, ah(async (req: AuthRequest, res) => {
 
 const publicHackathonStatuses = ['published', 'registration_closed', 'ongoing', 'completed'];
 const allHackathonStatuses = ['draft', 'pending_review', 'published', 'registration_closed', 'ongoing', 'completed', 'archived'];
+// Categories/organizers/eligibility/timeline are fetched via LATERAL subqueries (one index-backed
+// lookup per outer row, planned as part of the same query) instead of N+1 follow-up queries per
+// hackathon. bookmarked/interested reuse the existing bool_or-over-LEFT-JOIN pattern.
 const hackathonSelect = `SELECT h.*, d.code AS department_code, u.full_name AS coordinator_name,
     COUNT(DISTINCT r.id) FILTER (WHERE r.status = 'approved')::int AS registered_count,
     COUNT(DISTINCT hi.student_id)::int AS interested_count,
-    COALESCE(bool_or(hi.student_id = $__viewer__), false) AS interested
+    COALESCE(bool_or(hi.student_id = $__viewer__), false) AS interested,
+    COALESCE(bool_or(hb.user_id = $__viewer__), false) AS bookmarked,
+    COALESCE(cat.categories, '{}') AS categories,
+    COALESCE(org.organizers, '{}') AS organizers,
+    COALESCE(elig.eligibility, '[]'::jsonb) AS eligibility,
+    COALESCE(rounds.timeline, '[]'::jsonb) AS timeline
     FROM hackathons h LEFT JOIN departments d ON d.id = h.organizer_department_id LEFT JOIN users u ON u.id = h.coordinator_id
     LEFT JOIN registrations r ON r.hackathon_id = h.id
-    LEFT JOIN hackathon_interests hi ON hi.hackathon_id = h.id`;
+    LEFT JOIN hackathon_interests hi ON hi.hackathon_id = h.id
+    LEFT JOIN hackathon_bookmarks hb ON hb.hackathon_id = h.id
+    LEFT JOIN LATERAL (
+      SELECT array_agg(c.name ORDER BY c.name) AS categories
+      FROM hackathon_category_links hcl JOIN hackathon_categories c ON c.id = hcl.category_id
+      WHERE hcl.hackathon_id = h.id
+    ) cat ON true
+    LEFT JOIN LATERAL (
+      SELECT array_agg(o.name ORDER BY o.name) AS organizers
+      FROM hackathon_organizers ho JOIN organizers o ON o.id = ho.organizer_id
+      WHERE ho.hackathon_id = h.id
+    ) org ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(jsonb_build_object('year', he.year, 'label', he.label) ORDER BY he.year NULLS LAST, he.label) AS eligibility
+      FROM hackathon_eligibility he WHERE he.hackathon_id = h.id
+    ) elig ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(jsonb_build_object('id', hr.id, 'name', hr.name, 'sequence', hr.sequence, 'startsAt', hr.starts_at, 'endsAt', hr.ends_at, 'instructions', hr.instructions) ORDER BY hr.sequence) AS timeline
+      FROM hackathon_rounds hr WHERE hr.hackathon_id = h.id
+    ) rounds ON true`;
+const hackathonGroupBy = `h.id, d.code, u.full_name, cat.categories, org.organizers, elig.eligibility, rounds.timeline`;
 
 app.get('/hackathons', authenticate, ah(async (req: AuthRequest, res) => {
   const search = typeof req.query.search === 'string' ? req.query.search : '';
   const statuses = req.user!.role === 'student' ? publicHackathonStatuses : allHackathonStatuses;
-  const { rows } = await pool.query(`${hackathonSelect.replace('$__viewer__', '$3')}
+  const { rows } = await pool.query(`${hackathonSelect.replace(/\$__viewer__/g, '$3')}
     WHERE h.status = ANY($2) AND (h.title ILIKE $1 OR h.organizer ILIKE $1)
-    GROUP BY h.id, d.code, u.full_name ORDER BY h.registration_closes_at ASC`, [`%${search}%`, statuses, req.user!.id]);
+    GROUP BY ${hackathonGroupBy} ORDER BY h.registration_closes_at ASC NULLS LAST`, [`%${search}%`, statuses, req.user!.id]);
   res.json(rows);
 }));
 
 app.get('/hackathons/:id', authenticate, ah(async (req: AuthRequest, res) => {
-  const { rows } = await pool.query(`${hackathonSelect.replace('$__viewer__', '$2')}
+  const { rows } = await pool.query(`${hackathonSelect.replace(/\$__viewer__/g, '$2')}
     WHERE h.id = $1
-    GROUP BY h.id, d.code, u.full_name`, [req.params.id, req.user!.id]);
+    GROUP BY ${hackathonGroupBy}`, [req.params.id, req.user!.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Hackathon not found.' });
   res.json(rows[0]);
+}));
+
+app.get('/bookmarks/mine', authenticate, ah(async (req: AuthRequest, res) => {
+  const { rows } = await pool.query(`${hackathonSelect.replace(/\$__viewer__/g, '$1')}
+    WHERE h.id IN (SELECT hackathon_id FROM hackathon_bookmarks WHERE user_id = $1)
+    GROUP BY ${hackathonGroupBy} ORDER BY h.registration_closes_at ASC NULLS LAST`, [req.user!.id]);
+  res.json(rows);
+}));
+
+app.post('/hackathons/:id/bookmark', authenticate, ah(async (req: AuthRequest, res) => {
+  await pool.query(`INSERT INTO hackathon_bookmarks (user_id, hackathon_id) VALUES ($1, $2) ON CONFLICT (user_id, hackathon_id) DO NOTHING`, [req.user!.id, req.params.id]);
+  await audit(req.user!.id, 'bookmark', 'hackathon', req.params.id);
+  res.status(204).end();
+}));
+
+app.delete('/hackathons/:id/bookmark', authenticate, ah(async (req: AuthRequest, res) => {
+  await pool.query('DELETE FROM hackathon_bookmarks WHERE user_id = $1 AND hackathon_id = $2', [req.user!.id, req.params.id]);
+  await audit(req.user!.id, 'remove_bookmark', 'hackathon', req.params.id);
+  res.status(204).end();
 }));
 
 app.post('/hackathons', authenticate, allow('faculty', 'admin'), ah(async (req: AuthRequest, res) => {

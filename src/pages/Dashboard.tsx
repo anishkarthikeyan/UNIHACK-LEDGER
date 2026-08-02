@@ -47,6 +47,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const totalInterested = hackathons.reduce((sum, h) => sum + h.interested_count, 0);
   const totalRegistered = hackathons.reduce((sum, h) => sum + h.registered_count, 0);
   const deadlinesThisWeek = hackathons.filter((h) => {
+    if (!h.registration_closes_at) return false;
     const days = (new Date(h.registration_closes_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
     return days >= 0 && days <= 7;
   }).length;
@@ -162,7 +163,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 {hackathons.slice(0, 8).map((h) => (
                   <tr key={h.id} className="hover:bg-neutral-700 transition-colors">
                     <td className="px-6 py-4 font-bold">{h.title}</td>
-                    <td className="px-6 py-4 text-neutral-400 font-mono text-xs">{new Date(h.registration_closes_at).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-neutral-400 font-mono text-xs">{h.registration_closes_at ? new Date(h.registration_closes_at).toLocaleDateString() : 'TBA'}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-yellow-400 text-white">
                         {h.status.replace(/_/g, ' ')}

@@ -19,6 +19,20 @@ export interface AuthUser {
 
 export type HackathonStatus = 'draft' | 'pending_review' | 'published' | 'registration_closed' | 'ongoing' | 'completed' | 'archived';
 
+export interface HackathonEligibilityEntry {
+  year: number | null;
+  label: string | null;
+}
+
+export interface HackathonRound {
+  id: string;
+  name: string;
+  sequence: number;
+  startsAt: string;
+  endsAt: string | null;
+  instructions: string | null;
+}
+
 export interface Hackathon {
   id: string;
   title: string;
@@ -40,7 +54,8 @@ export interface Hackathon {
   max_team_size: number;
   solo_allowed: boolean;
   registration_opens_at: string | null;
-  registration_closes_at: string;
+  // Nullable: a meaningful share of the imported competition dataset reports "TBA".
+  registration_closes_at: string | null;
   starts_at: string | null;
   ends_at: string | null;
   status: HackathonStatus;
@@ -49,6 +64,32 @@ export interface Hackathon {
   interested: boolean;
   created_at: string;
   updated_at: string;
+
+  // Competition dataset fields (database/migrations/0001_competition_dataset.sql).
+  external_ref: string | null;
+  external_status: string | null;
+  external_registered_teams: number | null;
+  external_registered_students: number | null;
+  source: string | null;
+  short_description: string | null;
+  registration_url: string | null;
+  banner_image_url: string | null;
+  brochure_url: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  faq: string | null;
+  rules: string | null;
+  judging_criteria: string | null;
+  problem_statements: string | null;
+  categories: string[];
+  organizers: string[];
+  eligibility: HackathonEligibilityEntry[];
+  timeline: HackathonRound[];
+  bookmarked: boolean;
 }
 
 export interface CreateHackathonInput {

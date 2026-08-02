@@ -35,7 +35,7 @@ export default function ManageHackathons({ onNavigate }: ManageHackathonsProps) 
 
   const startEdit = (h: Hackathon) => {
     setEditingId(h.id);
-    setEditClosesAt(new Date(h.registration_closes_at).toISOString().slice(0, 16));
+    setEditClosesAt(h.registration_closes_at ? new Date(h.registration_closes_at).toISOString().slice(0, 16) : '');
     setSaved(false);
   };
 
@@ -132,7 +132,7 @@ export default function ManageHackathons({ onNavigate }: ManageHackathonsProps) 
                             {h.status.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-neutral-400 font-mono text-xs">{new Date(h.registration_closes_at).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-neutral-400 font-mono text-xs">{h.registration_closes_at ? new Date(h.registration_closes_at).toLocaleDateString() : 'TBA'}</td>
                         <td className="px-6 py-4 text-center text-neutral-400 font-mono">{h.interested_count}</td>
                         <td className="px-6 py-4 text-center font-bold text-yellow-400 font-mono">{h.registered_count}</td>
                         <td className="px-6 py-4">

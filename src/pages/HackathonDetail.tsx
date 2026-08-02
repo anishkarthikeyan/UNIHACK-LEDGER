@@ -50,6 +50,12 @@ export default function HackathonDetail({ hackathonId, onNavigate }: HackathonDe
 
   const teamRegs = registrations.filter((r) => r.participation_mode === 'team');
   const soloRegs = registrations.filter((r) => r.participation_mode === 'solo');
+  const organizers = hackathon.organizers.length ? hackathon.organizers : [hackathon.organizer];
+  const eligibilityYears = hackathon.eligibility.filter((e) => e.year !== null).map((e) => e.year as number).sort((a, b) => a - b);
+  const eligibilityLabels = hackathon.eligibility.filter((e) => e.label !== null).map((e) => e.label as string);
+  const eligibilityText = eligibilityYears.length || eligibilityLabels.length
+    ? [eligibilityYears.length ? `Year(s): ${eligibilityYears.join(', ')}` : null, ...eligibilityLabels].filter(Boolean).join(' · ')
+    : (hackathon.eligible_years.length ? `Year(s): ${hackathon.eligible_years.join(', ')}` : 'All Years');
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -82,13 +88,30 @@ export default function HackathonDetail({ hackathonId, onNavigate }: HackathonDe
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 text-sm">
-              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Organizer</span> <span className="font-bold">{hackathon.organizer}</span></div>
+              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Organizer(s)</span> <span className="font-bold">{organizers.join(', ')}</span></div>
+              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Category</span> <span className="font-bold">{hackathon.categories.join(', ') || '—'}</span></div>
               <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Domain</span> <span className="font-bold">{hackathon.domains.join(', ') || '—'}</span></div>
-              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Eligibility</span> <span className="font-bold">{hackathon.eligible_years.length ? `Year(s): ${hackathon.eligible_years.join(', ')}` : 'All Years'}</span></div>
+              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Eligibility</span> <span className="font-bold">{eligibilityText}</span></div>
               <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Team Size</span> <span className="font-bold">{hackathon.min_team_size} - {hackathon.max_team_size} Members (Solo Allowed: {hackathon.solo_allowed ? 'Yes' : 'No'})</span></div>
-              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Registration Closes</span> <span className="font-bold font-mono">{new Date(hackathon.registration_closes_at).toLocaleString()}</span></div>
+              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Registration Closes</span> <span className="font-bold font-mono">{hackathon.registration_closes_at ? new Date(hackathon.registration_closes_at).toLocaleString() : 'TBA'}</span></div>
+              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Prize Pool</span> <span className="font-bold font-mono">{hackathon.prize_pool ?? '—'}</span></div>
+              <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">External Status</span> <span className="font-bold">{hackathon.external_status ?? '—'}</span></div>
               <div className="md:col-span-2 flex flex-col gap-1"><span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Description</span> <span className="font-medium text-neutral-300">{hackathon.description}</span></div>
             </div>
+
+            {hackathon.timeline.length > 0 && (
+              <div className="mt-8 pt-8 border-t border-neutral-800">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 block mb-4">Timeline</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {hackathon.timeline.map((round) => (
+                    <div key={round.id} className="p-4 rounded-2xl border-2 border-neutral-800 bg-neutral-900">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-1">{round.name}</p>
+                      <p className="text-sm font-bold text-white">{new Date(round.startsAt).toLocaleDateString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -144,6 +167,8 @@ export default function HackathonDetail({ hackathonId, onNavigate }: HackathonDe
                 { label: 'Solo', value: soloRegs.length },
                 { label: 'Teams', value: teamRegs.length },
                 { label: 'Pending Verification', value: registrations.filter((r) => r.status === 'pending_verification').length },
+                ...(hackathon.external_registered_teams !== null ? [{ label: 'External Reg. Teams', value: hackathon.external_registered_teams }] : []),
+                ...(hackathon.external_registered_students !== null ? [{ label: 'External Reg. Students', value: hackathon.external_registered_students }] : []),
               ].map((item) => (
                 <div key={item.label} className="flex justify-between items-center p-3 bg-black rounded-2xl">
                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">{item.label}</span>
