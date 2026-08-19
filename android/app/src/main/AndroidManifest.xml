@@ -38,4 +38,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required on Android 13+ (API 33) for the app to post any notification, including
+         @capacitor/push-notifications delivery — without it, notifications silently never show
+         even once a real Firebase project is configured. The plugin prompts for this at runtime;
+         this declaration is what makes that prompt (and the permission) exist at all. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

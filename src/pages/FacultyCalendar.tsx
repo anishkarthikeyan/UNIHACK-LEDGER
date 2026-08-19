@@ -33,10 +33,13 @@ export default function FacultyCalendar() {
   useEffect(load, []);
 
   const events = useMemo<CalendarEvent[]>(() => {
-    const deadlineEvents: CalendarEvent[] = hackathons.map((h) => ({
-      date: new Date(h.registration_closes_at),
+    // registration_closes_at is nullable ("TBA" competitions) — skip those instead of producing
+    // an Invalid Date / epoch-1970 calendar entry (matches the guard every other page already
+    // applies to this field, e.g. ExploreHackathons.tsx, Dashboard.tsx, HackathonDetail.tsx).
+    const deadlineEvents: CalendarEvent[] = hackathons.filter((h) => h.registration_closes_at).map((h) => ({
+      date: new Date(h.registration_closes_at as string),
       title: `${h.title} — Registration Closes`,
-      time: new Date(h.registration_closes_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: new Date(h.registration_closes_at as string).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: 'Deadline',
     }));
     const startEvents: CalendarEvent[] = hackathons.filter((h) => h.starts_at).map((h) => ({

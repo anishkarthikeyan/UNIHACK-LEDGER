@@ -1,107 +1,151 @@
 Competition Dashboard 2026 - 2027,,,,,,,,,,,,,,,,
 S. No,Competition Name,Competition Status,Eligible Year,Reg. Deadline,R1 -Date,R2 - Date,Competition Date,Remaining Days for Reg.,R. Days for R1,R. Days for R2,R. Days for Final,Reg. Team,Reg. Std,Total Prize Amount,Category,Organizer
-1,Medha Medithon 2026,On Going,"I, II, III, IV",01-08-26,12-08-26,22-08-26,,6,17,27,,2,6,"₹1,00,000",Competition,"Leelatai Kulkarni Memorial Hospital, IIT Bombay"
-2,FANUC ROBOT Internship Program 2027,On Going,IV,09-08-26,22-08-26,01-12-26,,14,27,128,,1,1,,Internship,FANUC India
-3,36-Hour National Level Hackathon 2026,On Going,"I, II, III, IV",24-07-26,31-07-26,,,-2,5,,,14,39,Cash Rewards + Internship Opportunities,Competition,NIT Trichy 
-4,InnoGenesis 2026,On Going,"I, II, III, IV",23-07-26,07-08-26,,,-3,12,,,1,4,₹5 Lakhs,Competition,Dr. RVR NRI Institute Of Technology 
-5,V-Guard Big Idea Tech Design Competition,On Going,"III, IV",06-08-26,12-08-26,28-08-26,,11,17,33,,0,0,"₹3,00,000",Competition,V-Guard
-6,PEC Hacks 4.0,On Going,"I, II, III, IV",22-07-26,22-07-26,25-08-26,,-4,-4,30,,8,36,"₹3,00,000",Competition,Panimalar Engineering College
-7,IEEE WIE ILS 2026 National Hackathon,On Going,"I, II, III, IV",31-07-26,27-08-26,25-10-26,,5,32,91,,4,14,TBA,Competition,IEEE
-8,NeX-Gen Robotics Challenge,On Going,"I, II, III, IV",31-07-26,28-08-26,27-11-26,,5,33,124,,3,10,₹1 Lakh+,Competition,IDREA
-9,GBT BuildStorm 2026,On Going,"I, II, III, IV",18-08-26,12-09-26,20-09-26,,23,48,56,,1,5,"$18,000",Competition,Go Beyond Tickets (GBT)
-10,Janatics Automation Skill & Competency Challenge,On Going,"I, II, III, IV",10-08-26,15-08-26,18-08-26,,15,20,23,,6,6,"₹1,75,000",Competition,"Janatic, IASC"
-11,TechNova: Igniting Brilliance 3,On Going,"I, II, III, IV",01-08-26,01-08-26,24-08-26,,6,6,29,,0,0,"₹2,00,000",Competition,Enterprise System Solutions Private Limited
-12,ZERO TO ONE AI Hackathon,On Going,"I, II, III, IV",22-07-26,22-07-26,25-07-26,,-4,-4,-1,,11,42,₹2.5 Lakhs + PPI,C + P,Pocket FM
-13,Create in India Challenge 2,On Going,StartUp Only,31-07-26,31-07-26,,,5,5,,,1,3,Grant up to ₹1 Crore,Start-up,Wavesbazaar
-14,CAG-ICSSR Research Article Competition,On Going,"I, II, III, IV",31-08-26,30-09-26,,,36,66,,,3,3,₹5 Lakhs,Competition,"CAG, ICSSR"
-15,ChatGPT Codex Hackathon 2026,On Going,"I, II, III, IV",23-07-26,03-08-26,09-08-26,,-3,8,14,,18,18,Codex Pro access for 1 year,Competition,Blockseblock
-16,Build with Gemma Hackathon,On Going,"I, II, III, IV",30-08-26,31-08-26,,,35,36,,,1,2,"$2,000",Competition,Google Developer Groups (GDG) Pwani
-17,Adobe University Hackathon 2026,On Going,"I, II, III, IV",01-08-26,TBA,TBA,,6,,,,9,26,TBA,C + P, Adobe
-18,FinSpark'26,On Going,"I, II, III, IV",16-07-26,16-07-26,17-07-26,,-10,-10,-9,,12,40,₹10 Lakhs,Competition,Bank of Maharashtra
-19,India AI Impact Festival 2026,On Going,"I, II, III, IV",26-07-26,26-07-26,,,0,0,,,9,29,Awards & Recognitions,Competition,"STPI, MEITY and AIM."
-20,NIDAR 2026-2027,On Going,"I, II, III, IV",10-08-26,10-08-26,,,15,15,,,0,0,₹67 Lakhs + PPO,C + P,"DFI, MEITY and Swayaan."
-21,All India Hackathon – Axcentra 2026,On Going,"I, II, III, IV",11-08-26,17-08-26,22-08-26,,16,22,27,,17,40,₹1 Lakh+,Competition,"Axcentra, Wolfram Research & Beeskilled"
-22,DeepTech Bharat Hackathon 2026,On Going,"I, II, III, IV",31-07-26,31-07-26,07-08-26,,5,5,12,,19,61,₹ 1.25 Lakhs + Incubation Support,Competition,Nashik Engineering Cluster
-23,Arm AI Optimization Challenge 2026,On Going,"I, II, III, IV",15-08-26,15-08-26,15-09-26,,20,20,51,,8,30,"$8,000",Competition,Arm
-24,1st India Computer Vision Hackathon 2026,On Going,"I, II, III, IV",15-07-26,05-08-26,,,-11,10,,,8,37,₹5 Lakhs,Competition,ISAC
-25,Security Hackathon 2026,On Going,"I, II, III, IV",10-07-26,13-07-26,,,-16,-13,,,9,15,₹32 Lakhs,Competition,C-DAC
-26,IBM Z Datathon,On Going,"I, II, III, IV",01-10-26,01-10-26,,,67,67,,,3,13,"$50,000+",Competition,IBM
-27,HACK CORE 2026,On Going,"I, II, III, IV",21-07-26,03-08-26,,,-5,8,,,6,28,TBA,Competition,"IIT Ropar, Annam.AI, Syngenta Biologicals"
-28,Sustainability Hackathon 2026,On Going,"I, II, III, IV",15-07-26,15-07-26,,,-11,-11,,,27,100,₹ 5 Lakh + Grant support,C + Start-Up ,IIT Bombay.
-29,ExploitX: Into The Void 2.0,On Going,"I, II, III, IV",16-07-26,18-07-26,30-07-26,,-10,-8,4,,1,1,"₹ 2,00,000+",Competition,Chennai Institute of Technology
-30,International Innovation Challenge 3.0,On Going,"I, II, III, IV",11-08-26,11-08-26,13-08-26,,16,16,18,,3,11,₹7 Lakhs,Competition,"Manipal University (MU), Jaipur"
-31,Independence Day Celebration Contest - 2026,On Going,"I, II, III, IV",15-07-26,15-07-26,,,-11,-11,,,9,9,₹ 4 Lakhs ,Competition,"MyGov, MyBharat."
-32,Odoo x LDCE Ahmedabad Hackathon 26,On Going,"I, II, III, IV",16-08-26,22-08-26,04-10-26,,21,27,70,,4,13,"₹1,05,000 + PPO",Competition,LDCE
-33,Odoo Hackathon 2026,On Going,"I,II, III, IV",05-07-26,12-07-26,05-09-26,,-21,-14,41,,10,25,"₹5,00,000 + PPO",Competition,Odoo
-34,Handloom Hackathon 2026,On Going,"II, III, IV",20-07-26,20-07-26,25-07-26,,-6,-6,-1,,26,104,₹ 4 Lakhs ,Competition,"ThinkStartup,  Development Commissioner for Handlooms, Ministry of Textiles, Government of India"
-35,Aerothon 2026 - HAL x IITI,On Going,"I,II, III, IV",15-07-26,15-07-26,07-08-26,,-11,-11,12,,7,27,"₹ 2,10,000",Competition,"Hindustan Aeronautics Limited (HAL), Partner IIT Indore"
-36,Tally CodeBrewers,On Going,"II, III, IV",11-07-26,12-07-26,17-07-26,,-15,-14,-9,,7,17,"₹3,00,000",Competition,Tally
-37,Brain Bolt,On Going,"I, II, III, IV",14-07-26,16-07-26,,,-12,-10,,,4,17,"₹6,00,000+ ",Competition,IMECE India
-38,Youth For Climate Hackathon 2.0,On Going,"I, II, III, IV",08-07-26,08-07-26,06-09-26,,-18,-18,42,,2,5,TBA,Competition,ICLEI
-39,IKIGAI 2026,On Going,"I, II, III, IV",31-07-26,09-08-26,21-08-26,,5,14,26,,0,0,"₹1,03,000",Competition,Acropolis Institute of Technology and Research
-40,Women Who Master,On Going,"I, II, III, IV",21-07-26,25-07-26,08-08-26,,-5,-1,13,,17,17,"₹2,25,000",Competition,Aspire For Her x Logitech
-41,ReFlow 2026,On Going,"I, II, III, IV",15-08-26,,,,20,,,,6,20,TBA,Competition,IIT Bhubaneswar
-42,Robotics Innovation Hackathon 2026,On Going,"I, II, III, IV",20-07-26,20-07-26,,,-6,-6,,,10,40,TBA,Competition,IEEE
-43,The Big Idea Pitch Competition,On Going,"I, II, III, IV",15-07-26,15-07-26,03-08-26,,-11,-11,8,,3,11,"$4,000",Competition,IEEE
-44,The Bridgestone World Solar Challenge,On Going,"I, II, III, IV",07-08-26,07-08-26,,,12,12,,,1,4,TBA,Competition,Bridgestone
-45,XR Innovation Challenge 26,On Going,"I, II, III, IV",31-07-26,31-07-26,,,5,5,,,3,9,TBA,Competition,Startup TN & MathWorks
-46,Flipkart GRiD 8.0,On Going,"I, II, III, IV",07-07-26,,,,-19,,,,38,38,"₹6,00,000 + Internships Opportunities",C + P,Flipkart
-47,CIL-IMIN Hackathon 2026,On Going,"I, II, III, IV",28-06-26,28-06-26,,,-28,-28,,,8,31," ₹12,00,000 + Fund(Seed)",C + Start-Up ,IIT (ISM) Dhanbad and Coal India Limited (CIL)
-48,Kanad S.H.I.E.L.D. Cybersecurity Hackathon 2026,On Going,"I, II, III, IV",28-06-26,28-06-26,,,-28,-28,,,8,47,TBA,Competition,Government of Gujarat
-49,The FCRF Hackathon,On Going,"I, II, III, IV",05-07-26,12-07-26,17-07-26,,-21,-14,-9,,28,28,TBA,Competition,FCRF
-50,IEEE Makers DIY Project Competition,On Going,"I, II, III, IV",10-07-26,10-07-26,,,-16,-16,,,22,91,Grand Prize Travel Grant,Competition,IEEE
-51,Snowflake CoCo CLI Hackathon 2026,On Going,"I, II, III, IV",02-08-26,02-08-26,24-08-26,,7,7,29,,4,12,"$10,000",Competition,Snowflake
-52,SBI Hackathon @ GFF 2026,On Going,"I, II, III, IV",30-06-26,30-06-26,14-08-26,,-26,-26,19,,58,58,"₹4,75,000 ",Competition,"Global Fintech Fest, SBI"
-53,M5Stack Global Innovation Contest 2026,On Going,"I, II, III, IV",07-08-26,07-08-26,28-08-26,,12,12,33,,5,20,$ 2000 USD,Competition,M5Stack
-54,KPIT Sparkle,On Going,"I, II, III, IV",31-07-26,,,,5,,,,25,66,"₹17,00,000 Lakhs",Competition,KPIT software
-55,Agentic AI Build Week 2026,On Going,"I, II, III, IV",12-07-26,11-07-26,12-07-26,,-14,-15,-14,,11,34,"$1,000,000 USD",Competition,GenAI Fund
-56,AI for Social Impact Challenge,On Going,"I, II, III, IV",10-07-26,10-07-26,,,-16,-16,,,36,118,Incubation & Seed Grant Support,C + Start-Up ,"StartupTN, HCL Foundation"
-57,AI Product Challenge 2026,On Going,"I, II, III, IV",30-06-26,30-06-26,,,-26,-26,,,47,47,Internship Opportunities,C + I,Dyndox
-58,AI Builders Hackathon,On Going,"I, II, III, IV",26-08-26,26-08-26,,,31,31,,,19,52,"$5,000",Competition,Open Source Connect
-59,VoltHacks,On Going,"I, II, III, IV",06-09-26,06-09-26,16-09-26,,42,42,52,,9,34,"$2,080",Competition,Dialogate & Volthacks
-60,Vibe2Ship,On Going,"I, II, III, IV",21-06-26,22-06-26,,,-35,-34,,,73,73,"₹ 3,00,000",Competition,Coding Ninjas 10X Club
-61,Bharat WIN,On Going,"Startups, MSMEs",31-07-26,31-07-26,,,5,5,,,11,43,"₹10,00,000 Lakhs",Start-up,Ministry of Jal Shakti
-62,Go Healthy with Taiwan 2026,On Going,"I, II, III, IV",05-08-26,18-08-26,29-10-26,,10,23,95,,11,45,"$30,000 + Sponsored Trip to Taiwan",Competition,TAIWAN EXCELLENCE
-63,Made In India 2026,On Going,"I, II, III, IV",15-07-26,18-07-26,18-08-26,,-11,-8,23,,15,40,"₹10,00,000 + PPI",Competition,ZeAI SOFT
-64,HAC’KP 2026,On Going,"I, II, III, IV",11-07-26,22-07-26,05-08-26,,-15,-4,10,,6,6,TBA,Competition,Kerala Police Cyberdome
-65,The Next GD.Naidu Challenge,Runner,"I, II, III, IV",21-06-26,21-06-26,29-06-26,,-35,-35,-27,,12,44,₹10 Lakhs,Competition,"G.D. Naidu, Thanthi Media"
-66,Bharatiya Antariksh Hackathon 2026,On Going,"I, II, III, IV",01-07-26,20-07-26,06-08-26,,-25,-6,11,,33,123,"National recognition, internship opportunities",C + I,Indian Space Research Organisation (ISRO)
-67,Queue Cure '26,On Going,"I, II, III, IV",24-06-26,25-06-26,,,-32,-31,,,81,81,PPO,C + P,Wooble Software Private Limited
-68,Tata Technologies InnoVent-27,On Going,"III, IV",20-07-26,20-07-26,01-10-26,,-6,-6,67,,11,42,"₹ 4,50,000 + PPO",C + P,Tata
-69,IDBI Innovate 2026,On Going,"I, II, III, IV",13-07-26,13-07-26,31-07-26,,-13,-13,5,,23,75,"₹15,00,000 Lakhs",Competition,IDBI Bank
-70,International Hackathon Competition 2026,On Going,"I, II, III, IV",20-06-26,28-06-26,05-07-26,,-36,-28,-21,,6,12,"₹ 8,80,000 Lakhs",C + I,SKILSTATION
-71,NXP Cup India,On Going,"I, II, III, IV",10-07-26,01-08-26,,,-16,6,,,27,80,"₹ 3,50,000 Lakhs",Competition,NXP 
-72,Gappy AI Hackathon,On Going,"I, II, III, IV",29-06-26,30-06-26,07-07-26,,-27,-26,-19,,17,43,"₹ 1,00,000 + PPI",C + P,Gappy AI
-73,ScriptedBy{Her} 2.0,On Going,IV,19-06-26,21-06-26,26-06-26,,-37,-35,-30,,0,0,"₹ 2,25,000 + Internship Opportunity",C + I,Meesho
-74,QVAC Hackathon I,On Going,"I, II, III, IV",22-06-26,22-06-26,,,-34,-34,,,10,29,"$21,000 USD",Competition,QVAC
-75,Build an AI Trading Agent,On Going,"I, II, III, IV",15-06-26,02-07-26,,,-41,-24,,,7,8,"₹ 2,00,000 Lakhs",Competition,builderr.ai
-76,IEEE Computer Society Global Student Challenge 2026,On Going,"I, II, III, IV",28-06-26,13-07-26,07-12-26,,-28,-13,134,,5,10,"$5,000 USD",Competition,IEEE Computer Society
-77,TechExpo,On Going,"I, II, III, IV",31-07-26,31-07-26,31-08-26,,5,5,36,,21,65,"₹ 2,50,000 Lakhs",Competition,"Indian Institute of Technology (IIT), Guwahati"
-78,IEEE Technology Computer-Aided Design Hackathon 2026,On Going,"I, II, III, IV",20-06-26,08-07-26,,,-36,-18,,,17,17,$2000 USD,Competition,"Educational Activities Committee, IEEE Electron Devices Society"
-79,NetElixir AIgnition 3.0,On Going,"I, II, III, IV",10-06-26,12-06-26,15-07-26,,-46,-44,-11,,1,3,"₹ 3,00,000 Lakhs",Competition,NetElixir
-80,India Agentic AI Open Hackathon,On Going,"I, II, III, IV",19-06-26,26-06-26,01-07-26,,-37,-30,-25,,4,16,,Competition,"NVIDIA, OpenACC organization"
-81,Innovate4Cities AI x City Climate Action Hackathon 2026,On Going,"I, II, III, IV",31-08-26,21-06-26,22-06-26,,36,-35,-34,,6,25,Sponsored trip to spain,Competition,Global Covenant of Mayors for Climate & Energy (GCoM)
-82,La Trobe x Cisco,On Going,"III, IV",10-06-26,22-07-26,,,-46,-4,,,3,15,"AUD $1,750)",Competition,Cisco
-83,OneAquaHealth IEEE Global Hackathon,On Going,"I, II, III, IV",01-10-26,01-10-26,,,67,67,,,5,11,"$3,000+",Competition,"OneAquaHealth, IEEE"
-84,AI Gaming Hackathon,On Going,"I, II, III, IV",10-08-26,11-08-26,22-08-26,,15,16,27,,2,6,"₹10,00,000+",Competition,Ratan Tata Innovation Hub
-85,EW Project Challenge 2026,On Going,"I, II, III, IV",15-06-26,15-06-26,,,-41,-41,,,5,21,"₹500,000+",Competition,ElectronicWings
-86,JunctionX Tirana 2026,On Going,"I, II, III, IV",12-06-26,16-06-26,19-06-26,,-44,-40,-37,,0,0,"€15,000 + a Golden Ticket to Helsinki",Competition,B-Limitless
-87,Agents League Hackathon,On Going,"I, II, III, IV",12-06-26,14-06-26,14-06-26,,-44,-42,-42,,1,1,"$55,000 USD",Competition,Microsoft
-88,iQOO' Hackathon,On Going,"I, II, III, IV",02-06-26,02-06-26,06-06-26,,-54,-54,-50,,1,1," ₹1,80,000 ",Competition,Reskill
-89,"PSB's Cybersecurity, Fraud & AI Hackathon 2026",On Going,"I, II, III, IV",15-06-26,15-06-26,17-08-26,,-41,-41,22,,3,13,₹ 20 Lakhs,Competition,"Indian Bank Association, IITH"
-90,VYOMA Innovation Challenge,On Going,StartUp,30-06-26,01-06-26,,,-26,-55,,,1,4,₹ 80 Lakhs,C + Start-Up ,Bhashini
-91,SahAl for Shiksha Hackathon 2026,On Going,"I, II, III, IV",03-06-26,03-06-26,20-06-26,,-53,-53,-36,,0,0,₹15 Lakhs,Competition,Reskill
-92,Datathon 2026,On Going,"I, II, III, IV",19-07-26,26-07-26,11-06-26,,-7,0,-45,,13,55,₹10 Lakhs,Competition,"Karnataka State Police, Zoho"
-93,RevenueCat Shipaton 2026,On Going,"I, II, III, IV",30-09-26,30-09-26,,,66,66,,,1,2," $425,000 USD",Competition,RevenueCat
-94,Build With Gemini Xprize,On Going,"I, II, III, IV",18-08-26,18-08-26,26-09-26,,23,23,62,,10,37,$2 million USD,Competition,Gemini
-95,Arduino Physical AI Challenge 2026,On Going,"I, II, III, IV",15-08-26,23-08-26,31-08-26,,20,28,36,,16,52,₹30 Lakh+,Competition,"Arduino, Qualcomm, and Edge Impulse "
-96,India Runs Hackathon,On Going,"I, II, III, IV",28-06-26,28-06-26,,,-28,-28,,,9,26,₹50 Lakh+,Competition,Hack2skill
-97,UiPath AgentHack 2026,On Going,"I, II, III, IV",07-07-26,07-07-26,05-08-26,,-19,-19,10,,4,4,"$50,000 USD",Competition,UiPath
-98,VSLive Microsoft AI Hackathon 2026,On Going,"I, II, III, IV",20-07-26,28-07-26,,,-6,2,,,3,7,"$25,000 USD",Competition,Microsoft
-99,Samsung Solve for Tomorrow 2026,On Going,"I, II, III, IV",03-07-26,TBA,TBA,,-23,,,,48,124,₹2 Crore ,Competition,Samsung
-100,Maruti Suzuki DesignXathon 2026,On Going,"I, II, III, IV",13-07-26,13-07-26,24-08-26,,-13,-13,29,,9,25,"₹ 4,50,000 + Internship ",C + I,Maruti Suzuki
-101,Students Autonomous Underwater Vehicle (SAVe 2.0) - 2026,On Going,"II, III, IV",15-07-26,15-07-26,16-08-26,,-11,-11,21,,0,0,Opportunity to participate in an international competition,Competition,NIOT
-102,InnovaHack Chapter 1,On Going,"I, II, III, IV",20-07-26,25-07-26,09-08-26,,-6,-1,14,,6,18,"₹ 7,00,000 + PPI",C + P,Elite Forums
-103,Drone Rescue Challenge 2026,On Going,"I, II, III, IV",30-06-26,31-08-26,09-09-26,,-26,36,45,,3,4,TBA,Competition,"National Institute of Technology (NIT), Delhi"
-,RentIts Global Hackathon 2026,On Going,"I, II, III, IV",26-06-26,28-06-26,21-08-26,,-30,-28,26,,3,12,"$45,000 USD",Competition,Meta
-,,,,,,,,,,,,,2811,,,
+1,Lam Research Challenge 2026,On Going,"III, IV",26-08-26,,,,,,,,,,,C + Start-Up ,
+2,EPICS in IEEE - Oct 2026,On Going,"I, II, III, IV",01-10-26,01-10-26,,,44,44,,,0,0,"$10,000",Competition,IEEE
+3,OpenCV AI Competition 2026,On Going,"I, II, III, IV",27-10-26,27-10-26,,,70,70,,,2,8,"$12,000",Competition,"OpenCV, AWS"
+4,RakshaTech Synapse,On Going,StartUp,26-08-26,26-08-26,,,8,8,,,0,0,Funding Up to ₹5 crores,Start-up,IHFC (IIT Delhi).
+5,Digital Shram Sankalp - Reimagining India's Labour Ecosystem with AI,On Going,"I, II, III, IV",05-09-26,05-09-26,,,18,18,,,2,4,"₹1,40,000",Competition,Ministry of Labour & Employment
+6,TVS Credit E.P.I.C 8.0 - IT Challenge,On Going,"II, III, IV",14-08-26,14-08-26,,,-4,-4,,,8,14,"₹ 2,50,000 + PPI",C + P,TVS Credit
+7,TECHNOVA National AI Innovation Challenge 2026,On Going,"III, IV",25-08-26,,,,7,,,,3,13,"₹10,00,000 ",Competition,TSM
+8,The Great Agent Hackathon,On Going,"I, II, III, IV",25-08-26,25-08-26,25-09-26,,7,7,38,,2,4,"₹1,00,000",Competition,"Freshworks, WIP"
+9,Precision Care Challenge 2026,On Going,"II, III, IV",26-08-26,26-08-26,10-09-26,,8,8,23,,6,20,"₹ 3,25,000",Competition,GE HealthCare
+10,Indian Army Terrier Cyber Quest 2026,On Going,"I, II, III, IV",20-08-26,10-09-26,06-10-26,,2,23,49,,4,10,Medallions and Certificates,Competition,Territorial Army
+11,AI Ideathon 2026,On Going,"I, II, III, IV",11-08-26,13-08-26,,,-7,-5,,,2,6,"$10,000 USD",Competition,Cognisor AI
+12,QuantStorm,On Going,"III, IV",16-08-26,17-08-26,25-09-26,,-2,-1,38,,4,4," ₹ 2,50,000",Competition,"Indian Institute of Technology (IIT), Guwahati"
+13,Trivarna 2.0 ,On Going,"I, II, III, IV",13-08-26,15-08-26,,,-5,-3,,,0,0,"₹75,00,000 + PPI",Competition,Astitwam
+14,InnoServe Awards 2026,On Going,"I, II, III, IV",11-09-26,07-11-26,,,24,81,,,0,0,$6000 USD,Competition,Taipei Computer Association
+15,Bharat Agentic-AI Hackathon 2026,On Going,"I, II, III, IV",15-08-26,15-11-26,05-12-26,,-3,89,109,,1,3,₹18 Lakhs,Competition,Code for India
+16,IBM Bob 2.0 Hackathon,On Going,"I, II, III, IV",20-09-26,25-09-26,27-09-26,,33,38,40,,2,2,"$10,000",Competition,IBM
+17,CSI Origins Hackathon,On Going,"I, II, III, IV",12-08-26,18-08-26,,,-6,0,,,12,40,₹3.5 lakhs,Competition,VIT Chennai
+18,Rajasthan Language Model Training Hackathon 2026,On Going,StartUp,20-08-26,20-08-26,28-08-26,,2,2,10,,0,0,₹90 lakhs,C + Start-Up ,Bhashini
+19,India Automation Games 2026,On Going,"I, II, III, IV",12-08-26,12-08-26,,,-6,-6,,,1,3,TBA,Competition,ISA
+20,EchoSphere 2026,On Going,"I, II, III, IV",25-08-26,25-08-26,28-08-26,,7,7,10,,4,14,"$3,000",Competition,Knotic
+21,Inclusive Innovation For Bharat,On Going,"I, II, III, IV",17-08-26,17-08-26,28-09-26,,-1,-1,41,,4,13,"₹2,00,000",Competition, Techgig
+22,FOSSEE Semester Internship - Autumn 2026,On Going,"I, II, III, IV",23-08-26,23-08-26,07-09-26,,5,5,20,,10,10,Internship,Internship," IIT Bombay, FOSSEE"
+23,BRICS Hi-Tech Future Skills Competition 2026,On Going,"I, II, III, IV",05-08-26,12-08-26,13-08-26,,-13,-6,-5,,0,0,,Competition,BRICS
+24,The Chandigarh Police Hackathon,On Going,"I, II, III, IV",20-08-26,20-08-26,25-08-26,,2,2,7,,3,12,"₹1,75,000",Competition,Chandigarh Police in collaboration with UIET
+25,VisualSim Electronics Global Hackathon,On Going,"I, II, III, IV",09-09-26,03-10-26,,,22,46,,,5,14,Cash Prizes + Job Opportunity,Competition,Mirabilis Design Inc
+26,FOSSEE Open Hardware Make-A-Thon 2026,On Going,"I, II, III, IV",15-08-26,30-09-26,16-10-26,,-3,43,59,,6,24,"₹17,000 + Recognition",Competition," IIT Bombay, FOSSEE"
+27,EMBRIX '26 – VEGATHON,On Going,"I, II, III, IV",20-08-26,20-08-26,25-08-26,,2,2,7,,3,12,"₹1,00,000",Competition,Industry Exploration and Collaboration Cell (IECC)
+28,E-yantra Robotics Competition 2026 - 2027,On Going,"I, II, III, IV",25-08-26,,,,7,,,,0,0,"₹10,00,000 + Internship",C + I, IIT Bombay
+29,Robofest Gujarat 6.0,On Going,"I, II, III",15-08-26,15-08-26,31-08-26,,-3,-3,13,,1,4,₹5 Crore,Competition,Government of Gujarat
+30,IndiaSkills Competition 2026–2027,On Going,"I, II, III, IV",15-08-26,,,,-3,,,,3255,6510,,Competition,"Ministry of Skill Development and Entrepreneurship (MSDE), Government of India
+Supported by National Skill Development Corporation (NSDC)"
+31,UniHack,On Going,"I, II, III, IV",23-08-26,01-09-26,04-09-26,,5,14,17,,13,41,₹5 Lakhs,Competition, Unilog
+32,LT HackFest 2026 - International Innovation Challenge,On Going,"I, II, III, IV",06-08-26,13-08-26,21-08-26,,-12,-5,3,,8,17,₹25 Lakhs,Competition,LT Supercom
+33,FAER Engineering Innovation Challenge: 2026-2027,On Going,"II, III, IV",01-08-26,15-09-26,16-11-26,,-17,28,90,,2,7,₹2.5 Lakhs,Competition,FAER
+34,KONE Elevate'26,On Going,"I, II, III, IV",09-08-26,09-08-26,14-08-26,,-9,-9,-4,,8,30,"₹2,50,000",Competition,KONE
+35,National Level SSM Hackathon,On Going,"I, II, III, IV",04-08-26,25-08-26,01-09-26,,-14,7,14,,5,16,"₹20,00,000+",Competition,CDAC
+36,IndiaSkills Mascot Design Competition,On Going,"I, II, III, IV",15-08-26,15-08-26,,,-3,-3,,,7,7,Autodesk software licence,Competition,"MSDE, MyGov"
+37,Build With Bharat 2.0,On Going,"I, II, III, IV",02-09-26,02-09-26,12-09-26,,15,15,25,,27,108,"₹1,00,000",Competition,NIT Delhi
+38,Edge AI Hackathon 2026,On Going,"I, II, III, IV",15-08-26,15-08-26,18-09-26,,-3,-3,31,,4,17,"₹45,000 ",Competition,IEEE
+39,"Open Sandbox Development Workshop &
+0xCON 2026 CybereSecurity Conference",On Going,"I, II, III, IV",30-07-26,01-08-26,,,-19,-17,,,0,0,Participation Certificate,,Chennai Institute of Technology
+40,SEMICON India Hackathon 2026,On Going,"I, II, III, IV",16-08-26,12-08-26,16-08-26,,-2,-6,-2,,2,8,"₹400,000 + PPI ",Competition,"Semi, IESA"
+41,HackNexus'26,On Going,"I, II, III, IV",31-07-26,15-08-26,,,-18,-3,,,4,15,"₹1,00,000 + Internship Opportunity",C + I,Droidecks
+42,Coimbatore Innovation Hackathon 2026,Runner,"I, II, III, IV",31-07-26,04-08-26,,,-18,-14,,,30,136,₹2.5 Lakhs,Competition,"Rathinam Global University, AIC RAISE"
+43,Medha Medithon 2026,On Going,"I, II, III, IV",01-08-26,12-08-26,22-08-26,,-17,-6,4,,11,44,"₹1,00,000",Competition,"Leelatai Kulkarni Memorial Hospital, IIT Bombay"
+44,FANUC ROBOT Internship Program 2027,On Going,IV,09-08-26,22-08-26,01-12-26,,-9,4,105,,2,2,,Internship,FANUC India
+45,36-Hour National Level Hackathon 2026,On Going,"I, II, III, IV",24-07-26,31-07-26,,,-25,-18,,,22,61,Cash Rewards + Internship Opportunities,Competition,NIT Trichy 
+46,InnoGenesis 2026,Winner,"I, II, III, IV",23-07-26,07-08-26,,,-26,-11,,,4,16,₹5 Lakhs,Competition,Dr. RVR NRI Institute Of Technology 
+47,V-Guard Big Idea Tech Design Competition,On Going,"III, IV",06-08-26,12-08-26,28-08-26,,-12,-6,10,,1,3,"₹3,00,000",Competition,V-Guard
+48,PEC Hacks 4.0,On Going,"I, II, III, IV",22-07-26,22-07-26,25-08-26,,-27,-27,7,,9,39,"₹3,00,000",Competition,Panimalar Engineering College
+49,IEEE WIE ILS 2026 National Hackathon,On Going,"I, II, III, IV",31-07-26,27-08-26,25-10-26,,-18,9,68,,11,40,TBA,Competition,IEEE
+50,NeX-Gen Robotics Challenge,On Going,"I, II, III, IV",31-07-26,28-08-26,27-11-26,,-18,10,101,,6,20,₹1 Lakh+,Competition,IDREA
+51,GBT BuildStorm 2026,On Going,"I, II, III, IV",18-08-26,12-09-26,20-09-26,,0,25,33,,5,16,"$18,000",Competition,Go Beyond Tickets (GBT)
+52,Janatics Automation Skill & Competency Challenge,On Going,"I, II, III, IV",10-08-26,15-08-26,18-08-26,,-8,-3,0,,8,8,"₹1,75,000",Competition,"Janatic, IASC"
+53,TechNova: Igniting Brilliance 3,On Going,"I, II, III, IV",01-08-26,01-08-26,24-08-26,,-17,-17,6,,4,12,"₹2,00,000",Competition,Enterprise System Solutions Private Limited
+54,ZERO TO ONE AI Hackathon,On Going,"I, II, III, IV",22-07-26,22-07-26,25-07-26,,-27,-27,-24,,12,45,₹2.5 Lakhs + PPI,C + P,Pocket FM
+55,Create in India Challenge 2,On Going,StartUp Only,31-07-26,31-07-26,,,-18,-18,,,1,3,Grant up to ₹1 Crore,Start-up,Wavesbazaar
+56,CAG-ICSSR Research Article Competition,On Going,"I, II, III, IV",31-08-26,30-09-26,,,13,43,,,3,3,₹5 Lakhs,Competition,"CAG, ICSSR"
+57,ChatGPT Codex Hackathon 2026,On Going,"I, II, III, IV",23-07-26,03-08-26,09-08-26,,-26,-15,-9,,20,20,Codex Pro access for 1 year,Competition,Blockseblock
+58,Build with Gemma Hackathon,On Going,"I, II, III, IV",30-08-26,31-08-26,,,12,13,,,1,2,"$2,000",Competition,Google Developer Groups (GDG) Pwani
+59,Adobe University Hackathon 2026,On Going,"I, II, III, IV",01-08-26,TBA,TBA,,-17,,,,12,35,TBA,C + P, Adobe
+60,FinSpark'26,On Going,"I, II, III, IV",16-07-26,16-07-26,17-07-26,,-33,-33,-32,,12,40,₹10 Lakhs,Competition,Bank of Maharashtra
+61,India AI Impact Festival 2026,On Going,"I, II, III, IV",26-07-26,26-07-26,,,-23,-23,,,11,36,Awards & Recognitions,Competition,"STPI, MEITY and AIM."
+62,NIDAR 2026-2027,On Going,"I, II, III, IV",10-08-26,10-08-26,,,-8,-8,,,0,0,₹67 Lakhs + PPO,C + P,"DFI, MEITY and Swayaan."
+63,All India Hackathon – Axcentra 2026,On Going,"I, II, III, IV",11-08-26,17-08-26,22-08-26,,-7,-1,4,,23,57,₹1 Lakh+,Competition,"Axcentra, Wolfram Research & Beeskilled"
+64,DeepTech Bharat Hackathon 2026,On Going,"I, II, III, IV",31-07-26,31-07-26,07-08-26,,-18,-18,-11,,21,69,₹ 1.25 Lakhs + Incubation Support,Competition,Nashik Engineering Cluster
+65,Arm AI Optimization Challenge 2026,On Going,"I, II, III, IV",15-08-26,15-08-26,15-09-26,,-3,-3,28,,8,30,"$8,000",Competition,Arm
+66,1st India Computer Vision Hackathon 2026,On Going,"I, II, III, IV",15-07-26,05-08-26,,,-34,-13,,,8,37,₹5 Lakhs,Competition,ISAC
+67,Security Hackathon 2026,On Going,"I, II, III, IV",10-07-26,13-07-26,,,-39,-36,,,9,15,₹32 Lakhs,Competition,C-DAC
+68,IBM Z Datathon,On Going,"I, II, III, IV",01-10-26,01-10-26,,,44,44,,,4,18,"$50,000+",Competition,IBM
+69,HACK CORE 2026,On Going,"I, II, III, IV",21-07-26,03-08-26,,,-28,-15,,,7,32,TBA,Competition,"IIT Ropar, Annam.AI, Syngenta Biologicals"
+70,Sustainability Hackathon 2026,On Going,"I, II, III, IV",15-07-26,15-07-26,,,-34,-34,,,30,112,₹ 5 Lakh + Grant support,C + Start-Up ,IIT Bombay.
+71,ExploitX: Into The Void 2.0,On Going,"I, II, III, IV",16-07-26,18-07-26,30-07-26,,-33,-31,-19,,2,3,"₹ 2,00,000+",Competition,Chennai Institute of Technology
+72,International Innovation Challenge 3.0,On Going,"I, II, III, IV",11-08-26,11-08-26,13-08-26,,-7,-7,-5,,3,11,₹7 Lakhs,Competition,"Manipal University (MU), Jaipur"
+73,Independence Day Celebration Contest - 2026,On Going,"I, II, III, IV",15-07-26,15-07-26,,,-34,-34,,,9,9,₹ 4 Lakhs ,Competition,"MyGov, MyBharat."
+74,Odoo x LDCE Ahmedabad Hackathon 26,On Going,"I, II, III, IV",16-08-26,22-08-26,04-10-26,,-2,4,47,,4,13,"₹1,05,000 + PPO",Competition,LDCE
+75,Odoo Hackathon 2026,On Going,"I,II, III, IV",05-07-26,12-07-26,05-09-26,,-44,-37,18,,10,25,"₹5,00,000 + PPO",Competition,Odoo
+76,Handloom Hackathon 2026,On Going,"II, III, IV",20-07-26,20-07-26,25-07-26,,-29,-29,-24,,27,108,₹ 4 Lakhs ,Competition,"ThinkStartup,  Development Commissioner for Handlooms, Ministry of Textiles, Government of India"
+77,Aerothon 2026 - HAL x IITI,On Going,"I,II, III, IV",15-07-26,15-07-26,07-08-26,,-34,-34,-11,,7,27,"₹ 2,10,000",Competition,"Hindustan Aeronautics Limited (HAL), Partner IIT Indore"
+78,Tally CodeBrewers,On Going,"II, III, IV",11-07-26,12-07-26,17-07-26,,-38,-37,-32,,7,17,"₹3,00,000",Competition,Tally
+79,Brain Bolt,On Going,"I, II, III, IV",14-07-26,16-07-26,,,-35,-33,,,4,17,"₹6,00,000+ ",Competition,IMECE India
+80,Youth For Climate Hackathon 2.0,On Going,"I, II, III, IV",08-07-26,08-07-26,06-09-26,,-41,-41,19,,2,5,TBA,Competition,ICLEI
+81,IKIGAI 2026,On Going,"I, II, III, IV",31-07-26,09-08-26,21-08-26,,-18,-9,3,,1,4,"₹1,03,000",Competition,Acropolis Institute of Technology and Research
+82,Women Who Master,On Going,"I, II, III, IV",21-07-26,25-07-26,08-08-26,,-28,-24,-10,,17,17,"₹2,25,000",Competition,Aspire For Her x Logitech
+83,ReFlow 2026,On Going,"I, II, III, IV",15-08-26,,,,-3,,,,6,20,TBA,Competition,IIT Bhubaneswar
+84,Robotics Innovation Hackathon 2026,On Going,"I, II, III, IV",20-07-26,20-07-26,,,-29,-29,,,10,40,TBA,Competition,IEEE
+85,The Big Idea Pitch Competition,On Going,"I, II, III, IV",15-07-26,15-07-26,03-08-26,,-34,-34,-15,,3,11,"$4,000",Competition,IEEE
+86,The Bridgestone World Solar Challenge,On Going,"I, II, III, IV",07-08-26,07-08-26,,,-11,-11,,,1,4,TBA,Competition,Bridgestone
+87,XR Innovation Challenge 26,On Going,"I, II, III, IV",31-07-26,31-07-26,,,-18,-18,,,3,9,TBA,Competition,Startup TN & MathWorks
+88,Flipkart GRiD 8.0,On Going,"I, II, III, IV",07-07-26,,,,-42,,,,39,39,"₹6,00,000 + Internships Opportunities",C + P,Flipkart
+89,CIL-IMIN Hackathon 2026,On Going,"I, II, III, IV",28-06-26,28-06-26,,,-51,-51,,,8,31," ₹12,00,000 + Fund(Seed)",C + Start-Up ,IIT (ISM) Dhanbad and Coal India Limited (CIL)
+90,Kanad S.H.I.E.L.D. Cybersecurity Hackathon 2026,On Going,"I, II, III, IV",28-06-26,28-06-26,,,-51,-51,,,8,47,TBA,Competition,Government of Gujarat
+91,The FCRF Hackathon,On Going,"I, II, III, IV",05-07-26,12-07-26,17-07-26,,-44,-37,-32,,28,28,TBA,Competition,FCRF
+92,IEEE Makers DIY Project Competition,On Going,"I, II, III, IV",10-07-26,10-07-26,,,-39,-39,,,22,91,Grand Prize Travel Grant,Competition,IEEE
+93,Snowflake CoCo CLI Hackathon 2026,On Going,"I, II, III, IV",02-08-26,02-08-26,24-08-26,,-16,-16,6,,4,12,"$10,000",Competition,Snowflake
+94,SBI Hackathon @ GFF 2026,On Going,"I, II, III, IV",30-06-26,30-06-26,14-08-26,,-49,-49,-4,,58,58,"₹4,75,000 ",Competition,"Global Fintech Fest, SBI"
+95,M5Stack Global Innovation Contest 2026,On Going,"I, II, III, IV",07-08-26,07-08-26,28-08-26,,-11,-11,10,,5,20,$ 2000 USD,Competition,M5Stack
+96,KPIT Sparkle,On Going,"I, II, III, IV",31-07-26,,,,-18,,,,27,71,"₹17,00,000 Lakhs",Competition,KPIT software
+97,Agentic AI Build Week 2026,On Going,"I, II, III, IV",12-07-26,11-07-26,12-07-26,,-37,-38,-37,,11,34,"$1,000,000 USD",Competition,GenAI Fund
+98,AI for Social Impact Challenge,Runner,"I, II, III, IV",10-07-26,10-07-26,,,-39,-39,,,36,118,Incubation & Seed Grant Support,C + Start-Up ,"StartupTN, HCL Foundation"
+99,AI Product Challenge 2026,On Going,"I, II, III, IV",30-06-26,30-06-26,,,-49,-49,,,47,47,Internship Opportunities,C + I,Dyndox
+100,AI Builders Hackathon,On Going,"I, II, III, IV",26-08-26,26-08-26,,,8,8,,,21,57,"$5,000",Competition,Open Source Connect
+101,VoltHacks,On Going,"I, II, III, IV",06-09-26,06-09-26,16-09-26,,19,19,29,,9,34,"$2,080",Competition,Dialogate & Volthacks
+102,Vibe2Ship,On Going,"I, II, III, IV",21-06-26,22-06-26,,,-58,-57,,,73,73,"₹ 3,00,000",Competition,Coding Ninjas 10X Club
+103,Bharat WIN,On Going,"Startups, MSMEs",31-07-26,31-07-26,,,-18,-18,,,11,43,"₹10,00,000 Lakhs",Start-up,Ministry of Jal Shakti
+104,Go Healthy with Taiwan 2026,On Going,"I, II, III, IV",05-08-26,18-08-26,29-10-26,,-13,0,72,,15,65,"$30,000 + Sponsored Trip to Taiwan",Competition,TAIWAN EXCELLENCE
+105,Made In India 2026,On Going,"I, II, III, IV",15-07-26,18-07-26,18-08-26,,-34,-31,0,,18,49,"₹10,00,000 + PPI",Competition,ZeAI SOFT
+106,HAC’KP 2026,On Going,"I, II, III, IV",11-07-26,22-07-26,05-08-26,,-38,-27,-13,,7,7,TBA,Competition,Kerala Police Cyberdome
+107,The Next GD.Naidu Challenge,Runner,"I, II, III, IV",21-06-26,21-06-26,29-06-26,,-58,-58,-50,,12,44,₹10 Lakhs,Competition,"G.D. Naidu, Thanthi Media"
+108,Bharatiya Antariksh Hackathon 2026,On Going,"I, II, III, IV",01-07-26,20-07-26,06-08-26,,-48,-29,-12,,34,127,"National recognition, internship opportunities",C + I,Indian Space Research Organisation (ISRO)
+109,Queue Cure '26,On Going,"I, II, III, IV",24-06-26,25-06-26,,,-55,-54,,,81,81,PPO,C + P,Wooble Software Private Limited
+110,Tata Technologies InnoVent-27,On Going,"III, IV",20-07-26,20-07-26,01-10-26,,-29,-29,44,,11,42,"₹ 4,50,000 + PPO",C + P,Tata
+111,IDBI Innovate 2026,On Going,"I, II, III, IV",13-07-26,13-07-26,31-07-26,,-36,-36,-18,,24,79,"₹15,00,000 Lakhs",Competition,IDBI Bank
+112,International Hackathon Competition 2026,On Going,"I, II, III, IV",20-06-26,28-06-26,05-07-26,,-59,-51,-44,,6,12,"₹ 8,80,000 Lakhs",C + I,SKILSTATION
+113,NXP Cup India,On Going,"I, II, III, IV",10-07-26,01-08-26,,,-39,-17,,,27,80,"₹ 3,50,000 Lakhs",Competition,NXP 
+114,Gappy AI Hackathon,On Going,"I, II, III, IV",29-06-26,30-06-26,07-07-26,,-50,-49,-42,,17,43,"₹ 1,00,000 + PPI",C + P,Gappy AI
+115,ScriptedBy{Her} 2.0,On Going,IV,19-06-26,21-06-26,26-06-26,,-60,-58,-53,,0,0,"₹ 2,25,000 + Internship Opportunity",C + I,Meesho
+116,QVAC Hackathon I,On Going,"I, II, III, IV",22-06-26,22-06-26,,,-57,-57,,,10,29,"$21,000 USD",Competition,QVAC
+117,Build an AI Trading Agent,On Going,"I, II, III, IV",15-06-26,02-07-26,,,-64,-47,,,7,8,"₹ 2,00,000 Lakhs",Competition,builderr.ai
+118,IEEE Computer Society Global Student Challenge 2026,On Going,"I, II, III, IV",28-06-26,13-07-26,07-12-26,,-51,-36,111,,5,10,"$5,000 USD",Competition,IEEE Computer Society
+119,TechExpo,On Going,"I, II, III, IV",31-07-26,31-07-26,31-08-26,,-18,-18,13,,21,65,"₹ 2,50,000 Lakhs",Competition,"Indian Institute of Technology (IIT), Guwahati"
+120,IEEE Technology Computer-Aided Design Hackathon 2026,On Going,"I, II, III, IV",20-06-26,08-07-26,,,-59,-41,,,17,17,$2000 USD,Competition,"Educational Activities Committee, IEEE Electron Devices Society"
+121,NetElixir AIgnition 3.0,On Going,"I, II, III, IV",10-06-26,12-06-26,15-07-26,,-69,-67,-34,,1,3,"₹ 3,00,000 Lakhs",Competition,NetElixir
+122,India Agentic AI Open Hackathon,On Going,"I, II, III, IV",19-06-26,26-06-26,01-07-26,,-60,-53,-48,,4,16,,Competition,"NVIDIA, OpenACC organization"
+123,Innovate4Cities AI x City Climate Action Hackathon 2026,On Going,"I, II, III, IV",31-08-26,21-06-26,22-06-26,,13,-58,-57,,6,25,Sponsored trip to spain,Competition,Global Covenant of Mayors for Climate & Energy (GCoM)
+124,La Trobe x Cisco,On Going,"III, IV",10-06-26,22-07-26,,,-69,-27,,,3,15,"AUD $1,750)",Competition,Cisco
+125,OneAquaHealth IEEE Global Hackathon,On Going,"I, II, III, IV",01-10-26,01-10-26,,,44,44,,,5,11,"$3,000+",Competition,"OneAquaHealth, IEEE"
+126,AI Gaming Hackathon,On Going,"I, II, III, IV",10-08-26,11-08-26,22-08-26,,-8,-7,4,,2,6,"₹10,00,000+",Competition,Ratan Tata Innovation Hub
+127,EW Project Challenge 2026,On Going,"I, II, III, IV",15-06-26,15-06-26,,,-64,-64,,,5,21,"₹500,000+",Competition,ElectronicWings
+128,JunctionX Tirana 2026,On Going,"I, II, III, IV",12-06-26,16-06-26,19-06-26,,-67,-63,-60,,0,0,"€15,000 + a Golden Ticket to Helsinki",Competition,B-Limitless
+129,Agents League Hackathon,On Going,"I, II, III, IV",12-06-26,14-06-26,14-06-26,,-67,-65,-65,,1,1,"$55,000 USD",Competition,Microsoft
+130,iQOO' Hackathon,On Going,"I, II, III, IV",02-06-26,02-06-26,06-06-26,,-77,-77,-73,,1,1," ₹1,80,000 ",Competition,Reskill
+131,"PSB's Cybersecurity, Fraud & AI Hackathon 2026",On Going,"I, II, III, IV",15-06-26,15-06-26,17-08-26,,-64,-64,-1,,4,18,₹ 20 Lakhs,Competition,"Indian Bank Association, IITH"
+132,VYOMA Innovation Challenge,On Going,StartUp,30-06-26,01-06-26,,,-49,-78,,,1,4,₹ 80 Lakhs,C + Start-Up ,Bhashini
+133,SahAl for Shiksha Hackathon 2026,On Going,"I, II, III, IV",03-06-26,03-06-26,20-06-26,,-76,-76,-59,,0,0,₹15 Lakhs,Competition,Reskill
+134,Datathon 2026,On Going,"I, II, III, IV",19-07-26,26-07-26,11-06-26,,-30,-23,-68,,13,55,₹10 Lakhs,Competition,"Karnataka State Police, Zoho"
+135,RevenueCat Shipaton 2026,On Going,"I, II, III, IV",30-09-26,30-09-26,,,43,43,,,2,6," $425,000 USD",Competition,RevenueCat
+136,Build With Gemini Xprize,On Going,"I, II, III, IV",18-08-26,18-08-26,26-09-26,,0,0,39,,13,48,$2 million USD,Competition,Gemini
+137,Arduino Physical AI Challenge 2026,On Going,"I, II, III, IV",15-08-26,23-08-26,31-08-26,,-3,5,13,,16,52,₹30 Lakh+,Competition,"Arduino, Qualcomm, and Edge Impulse "
+138,India Runs Hackathon,On Going,"I, II, III, IV",28-06-26,28-06-26,,,-51,-51,,,9,26,₹50 Lakh+,Competition,Hack2skill
+139,UiPath AgentHack 2026,On Going,"I, II, III, IV",07-07-26,07-07-26,05-08-26,,-42,-42,-13,,4,4,"$50,000 USD",Competition,UiPath
+140,VSLive Microsoft AI Hackathon 2026,On Going,"I, II, III, IV",20-07-26,28-07-26,,,-29,-21,,,3,7,"$25,000 USD",Competition,Microsoft
+141,Samsung Solve for Tomorrow 2026,On Going,"I, II, III, IV",03-07-26,TBA,TBA,,-46,,,,48,124,₹2 Crore ,Competition,Samsung
+142,Maruti Suzuki DesignXathon 2026,On Going,"I, II, III, IV",13-07-26,13-07-26,24-08-26,,-36,-36,6,,9,25,"₹ 4,50,000 + Internship ",C + I,Maruti Suzuki
+143,Students Autonomous Underwater Vehicle (SAVe 2.0) - 2026,On Going,"II, III, IV",15-07-26,15-07-26,16-08-26,,-34,-34,-2,,0,0,Opportunity to participate in an international competition,Competition,NIOT
+144,InnovaHack Chapter 1,On Going,"I, II, III, IV",20-07-26,25-07-26,09-08-26,,-29,-24,-9,,6,18,"₹ 7,00,000 + PPI",C + P,Elite Forums
+145,Drone Rescue Challenge 2026,On Going,"I, II, III, IV",30-06-26,31-08-26,09-09-26,,-49,13,22,,3,4,TBA,Competition,"National Institute of Technology (NIT), Delhi"
+,RentIts Global Hackathon 2026,On Going,"I, II, III, IV",26-06-26,28-06-26,21-08-26,,-53,-51,3,,3,12,"$45,000 USD",Competition,Meta
+,,,,,,,,,,,,,2969,,,

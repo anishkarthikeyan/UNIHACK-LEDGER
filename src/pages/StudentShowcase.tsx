@@ -39,7 +39,7 @@ export default function StudentShowcase({ onNavigate }: StudentShowcaseProps) {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Innovation Gallery</h1>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Innovation Gallery</h1>
         <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Discover published projects and winning solutions</p>
       </div>
 

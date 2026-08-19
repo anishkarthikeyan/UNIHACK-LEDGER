@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Lock, Loader2 } from 'lucide-react';
+import { Lock, Loader2, Pencil } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
 import type { Hackathon, Registration } from '../types';
 import type { NavigateFn } from '../App';
@@ -65,6 +65,9 @@ export default function HackathonDetail({ hackathonId, onNavigate }: HackathonDe
           <p className="text-[10px] text-yellow-400 font-bold uppercase tracking-widest mt-2">Hackathons &gt; {hackathon.title}</p>
         </div>
         <div className="flex gap-3">
+          <button onClick={() => onNavigate?.('hackathons-edit', hackathon.id)} className="px-6 py-3 bg-yellow-400 text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:scale-95 transition-transform flex items-center gap-2 shadow-lg">
+            <Pencil size={14} /> Edit Details
+          </button>
           {hackathon.status === 'published' && (
             <button onClick={closeRegistration} disabled={closing} className="px-6 py-3 bg-black border-2 border-neutral-800 text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:border-yellow-400 transition-colors flex items-center gap-2 disabled:opacity-60">
               <Lock size={14} /> Close Reg

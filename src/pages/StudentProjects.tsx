@@ -44,7 +44,7 @@ export default function StudentProjects({ onNavigate }: StudentProjectsProps) {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Projects Repository</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Projects Repository</h1>
           <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Manage your hackathon submissions and portfolio</p>
         </div>
         <button onClick={() => onNavigate?.('project-add')} className="px-6 py-4 bg-yellow-400 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform flex items-center justify-center gap-2 shadow-lg">

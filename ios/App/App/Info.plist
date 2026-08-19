@@ -4,6 +4,16 @@
 <dict>
     <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
+	<!-- Dev/simulator-testing only: allows plain-HTTP loopback requests (VITE_API_BASE_URL=
+	     http://localhost:4000 against a local dev API) without weakening ATS for anything else —
+	     narrower than NSAllowsArbitraryLoads, which this deliberately does NOT set. A release
+	     build points VITE_API_BASE_URL at a real HTTPS API (see npm run build:mobile) and never
+	     needs this exception; harmless to leave present since it only exempts loopback. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
@@ -47,5 +57,15 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Lets the app receive silent/background remote-notification pushes once a real Apple Push
+	     Notification service certificate/key is configured (Part 8 — pending an Apple Developer
+	     account). This alone is not enough to receive push: Xcode's Signing & Capabilities tab
+	     also needs the "Push Notifications" capability added (which creates
+	     ios/App/App/App.entitlements with aps-environment) — that step requires an actual Apple
+	     Developer account to sign with, so it isn't done here. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

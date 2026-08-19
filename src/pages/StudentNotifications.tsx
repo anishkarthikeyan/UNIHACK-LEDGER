@@ -8,12 +8,25 @@ interface StudentNotificationsProps {
   onNavigate?: NavigateFn;
 }
 
+// action_url is stored as a server-side logical path (see services.notifications.notify() call
+// sites), not a browser route — this app navigates by tab id, not URL, so map the handful of
+// values actually produced (teams.routes.ts, registrations.routes.ts) to their tab.
+function actionUrlToTab(actionUrl: string | null): string {
+  if (actionUrl === '/teams') return 'teams';
+  if (actionUrl === '/pipeline') return 'pipeline';
+  return 'explore';
+}
+
 const TYPE_ICON: Record<string, typeof Bell> = {
   interest: Clock,
   deadline: Clock,
   verification: ShieldAlert,
   general: Calendar,
   update: CheckCircle2,
+  registration_submitted: Clock,
+  registration_reviewed: CheckCircle2,
+  team_invite: Bell,
+  team_join_request: Bell,
 };
 
 export default function StudentNotifications({ onNavigate }: StudentNotificationsProps) {
@@ -65,7 +78,7 @@ export default function StudentNotifications({ onNavigate }: StudentNotification
     <div className="space-y-8 animate-in fade-in duration-500 h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Notifications</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Notifications</h1>
           <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Stay updated on your hackathons and deadlines</p>
         </div>
         <div className="flex gap-4">
@@ -112,12 +125,12 @@ export default function StudentNotifications({ onNavigate }: StudentNotification
                     <div className="mt-1 shrink-0">
                       {!notif.read_at ? <div className="w-2 h-2 rounded-full bg-yellow-400 mt-2"></div> : <div className="w-2 h-2 rounded-full bg-transparent mt-2"></div>}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-1">
-                        <h3 className={`text-sm font-bold leading-tight ${!notif.read_at ? 'text-white' : 'text-neutral-300'}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-1 gap-2">
+                        <h3 className={`text-sm font-bold leading-tight break-words min-w-0 ${!notif.read_at ? 'text-white' : 'text-neutral-300'}`}>
                           {notif.title}
                         </h3>
-                        <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest whitespace-nowrap ml-4">{new Date(notif.created_at).toLocaleDateString()}</span>
+                        <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest whitespace-nowrap shrink-0">{new Date(notif.created_at).toLocaleDateString()}</span>
                       </div>
                       <div className="flex gap-2 mt-2">
                         <span className="px-2 py-1 rounded bg-neutral-900 border border-neutral-800 text-[9px] font-bold uppercase tracking-widest text-neutral-400 flex items-center gap-1">
@@ -135,13 +148,13 @@ export default function StudentNotifications({ onNavigate }: StudentNotification
         <div className="w-full md:w-1/2 lg:w-3/5 flex flex-col bg-black/20">
           {selectedNotification ? (
             <>
-              <div className="p-8 border-b border-neutral-800 flex justify-between items-start">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center border-2 bg-black border-neutral-800 text-neutral-400">
+              <div className="p-8 border-b border-neutral-800 flex justify-between items-start gap-3">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center border-2 bg-black border-neutral-800 text-neutral-400 shrink-0">
                     {React.createElement(TYPE_ICON[selectedNotification.type] ?? Bell, { size: 24 })}
                   </div>
-                  <div>
-                    <h2 className="text-xl font-black text-white">{selectedNotification.title}</h2>
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-black text-white break-words">{selectedNotification.title}</h2>
                     <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mt-1">{new Date(selectedNotification.created_at).toLocaleString()}</p>
                   </div>
                 </div>
@@ -155,7 +168,10 @@ export default function StudentNotifications({ onNavigate }: StudentNotification
                 {selectedNotification.action_url && (
                   <div className="mt-8 p-6 bg-yellow-400 rounded-2xl text-white border-4 border-yellow-500">
                     <h4 className="font-black uppercase tracking-widest text-sm mb-2">Related Link</h4>
-                    <button onClick={() => onNavigate?.('explore')} className="px-6 py-3 bg-neutral-900 text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:scale-[0.98] transition-transform">
+                    <button
+                      onClick={() => onNavigate?.(actionUrlToTab(selectedNotification.action_url))}
+                      className="px-6 py-3 bg-neutral-900 text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:scale-[0.98] transition-transform"
+                    >
                       View
                     </button>
                   </div>

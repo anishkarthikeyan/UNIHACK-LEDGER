@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, Users, User, Shield, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
-import type { Hackathon, Team } from '../types';
+import type { Hackathon, Registration, Team } from '../types';
 import type { NavigateFn } from '../App';
 
 interface StudentRegistrationProps {
@@ -12,6 +12,7 @@ interface StudentRegistrationProps {
 export default function StudentRegistration({ onNavigate, hackathonId }: StudentRegistrationProps) {
   const [hackathon, setHackathon] = useState<Hackathon | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [existingRegistration, setExistingRegistration] = useState<Registration | null>(null);
   const [mode, setMode] = useState<'team' | 'solo'>('team');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [externalUrl, setExternalUrl] = useState('');
@@ -25,10 +26,15 @@ export default function StudentRegistration({ onNavigate, hackathonId }: Student
     Promise.all([
       hackathonId ? api.hackathons.get(hackathonId) : Promise.resolve(null),
       api.teams.mine(),
-    ]).then(([h, t]) => {
+      api.registrations.mine(),
+    ]).then(([h, t, mine]) => {
       if (cancelled) return;
       setHackathon(h);
       setTeams(t);
+      // Duplicate-registration prevention is enforced by the API (and a DB constraint
+      // underneath), but surfacing it here — before the student fills out the form — is far
+      // clearer than letting them hit a 409 after clicking submit.
+      setExistingRegistration(mine.find((r) => r.hackathon_id === hackathonId && r.status !== 'rejected' && r.status !== 'withdrawn') ?? null);
       if (h && !h.solo_allowed) setMode('team');
     }).catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load registration data.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -37,7 +43,16 @@ export default function StudentRegistration({ onNavigate, hackathonId }: Student
 
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
   const allAgreed = agreed.rules && agreed.eligibility && agreed.deadline;
-  const canSubmit = hackathonId && allAgreed && (mode === 'solo' || Boolean(selectedTeamId)) && !submitting;
+  const minTeamSize = hackathon?.min_team_size ?? 1;
+  const maxTeamSize = hackathon?.max_team_size ?? Infinity;
+  const teamSizeOk = mode !== 'team' || !selectedTeam || (selectedTeam.member_count >= minTeamSize && selectedTeam.member_count <= maxTeamSize);
+  const isTeamLeader = mode !== 'team' || !selectedTeam || selectedTeam.member_role === 'leader';
+  const registrationOpen = !hackathon || (
+    hackathon.status === 'published'
+    && (!hackathon.registration_opens_at || new Date(hackathon.registration_opens_at) <= new Date())
+    && (!hackathon.registration_closes_at || new Date(hackathon.registration_closes_at) >= new Date())
+  );
+  const canSubmit = hackathonId && allAgreed && (mode === 'solo' || Boolean(selectedTeamId)) && teamSizeOk && isTeamLeader && registrationOpen && !existingRegistration && !submitting;
 
   const submit = async () => {
     if (!hackathonId) return;
@@ -62,16 +77,62 @@ export default function StudentRegistration({ onNavigate, hackathonId }: Student
     return <div className="flex items-center justify-center py-20 text-neutral-500"><Loader2 className="animate-spin" /></div>;
   }
 
+  const backButton = (
+    <button
+      onClick={() => onNavigate?.('hackathon-detail', hackathonId)}
+      className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-4 flex items-center gap-1 transition-colors"
+    >
+      <ChevronLeft size={14} /> Back to Details
+    </button>
+  );
+
+  if (existingRegistration) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500 h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="text-center space-y-6 bg-black border-4 border-neutral-800 p-12 rounded-[32px] max-w-lg">
+          <div className="w-20 h-20 bg-yellow-400 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(250,204,21,0.3)]">
+            <CheckCircle2 size={40} />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-widest text-white">Already Registered</h2>
+          <p className="text-neutral-400 text-sm">
+            {existingRegistration.participation_mode === 'team' ? 'Your team has' : 'You have'} already registered for {hackathon?.title ?? 'this hackathon'} — status: <span className="text-yellow-400 font-bold uppercase">{existingRegistration.status.replace(/_/g, ' ')}</span>.
+          </p>
+          <button onClick={() => onNavigate?.('pipeline')} className="w-full py-4 bg-neutral-900 text-white rounded-full font-black uppercase tracking-widest text-xs hover:bg-neutral-700 transition-colors">
+            View in My Pipeline
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!registrationOpen) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500 ">
+        <div className="border-b border-neutral-800 pb-8">
+          {backButton}
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Registration</h1>
+          <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">{hackathon?.title}</p>
+        </div>
+        <div className="bg-black border-4 border-red-500/40 rounded-[32px] p-8 flex items-start gap-4">
+          <AlertCircle size={24} className="text-red-400 shrink-0 mt-1" />
+          <div>
+            <h3 className="font-black uppercase tracking-widest text-sm text-white mb-2">Registration Closed</h3>
+            <p className="text-sm text-neutral-400">
+              {hackathon?.status !== 'published'
+                ? 'This hackathon is not currently accepting new registrations.'
+                : 'The registration window for this hackathon is not currently open.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 ">
       <div className="border-b border-neutral-800 pb-8">
-        <button
-          onClick={() => onNavigate?.('hackathon-detail', hackathonId)}
-          className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-4 flex items-center gap-1 transition-colors"
-        >
-          <ChevronLeft size={14} /> Back to Details
-        </button>
-        <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Registration</h1>
+        {backButton}
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Registration</h1>
         <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">{hackathon?.title ?? 'Select a hackathon to register'}</p>
       </div>
 
@@ -134,13 +195,27 @@ export default function StudentRegistration({ onNavigate, hackathonId }: Student
             <div className="pt-6 border-t border-neutral-800">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400">Team Roster</h3>
-                {selectedTeam.member_count >= (hackathon?.min_team_size ?? 1) && (
+                {teamSizeOk ? (
                   <span className="text-[10px] font-bold uppercase tracking-widest text-green-500 flex items-center gap-1">
                     <CheckCircle2 size={12} /> Requirements Met
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 flex items-center gap-1">
+                    <AlertCircle size={12} /> Team size doesn't fit this hackathon
                   </span>
                 )}
               </div>
               <p className="text-xs text-neutral-500">{selectedTeam.member_count} members — full roster available on the Teams page.</p>
+              {!teamSizeOk && (
+                <p className="text-xs text-red-400 font-bold mt-2">
+                  This hackathon requires teams of {minTeamSize}{Number.isFinite(maxTeamSize) ? `-${maxTeamSize}` : '+'} members. Add or remove members before registering.
+                </p>
+              )}
+              {selectedTeam.member_role !== 'leader' && (
+                <p className="text-xs text-red-400 font-bold mt-2 flex items-center gap-2">
+                  <Shield size={12} /> Only {selectedTeam.name}'s team leader can submit this registration. Ask them to complete it, or select a team you lead.
+                </p>
+              )}
             </div>
           )}
 

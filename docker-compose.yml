@@ -1,3 +1,10 @@
+# NOT used by the standard local-dev workflow anymore (see README "Local development") — this
+# project's `.env`/`db:*` scripts target a native Postgres install instead, and production uses
+# Railway's managed Postgres. Kept only as an optional alternative for anyone who genuinely
+# prefers a containerized local database; running it is a manual `docker compose up -d db`, not
+# something any npm script invokes. Existing data from when this WAS the primary workflow is
+# still in the `postgres_data` volume (migrated to the native install, not deleted — see
+# `docker volume ls` if you ever need to recover it).
 services:
   db:
     image: postgres:16-alpine
@@ -8,7 +15,9 @@ services:
       POSTGRES_USER: unihack
       POSTGRES_PASSWORD: unihack_local_password
     ports:
-      - "5433:5432"
+      # Deliberately NOT 5432 — that's the native Postgres install's port now (see .env). Only
+      # matters if you actually start this container; nothing depends on this port by default.
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro

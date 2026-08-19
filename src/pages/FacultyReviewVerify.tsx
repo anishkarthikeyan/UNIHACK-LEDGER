@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, X, Clock, AlertCircle, Loader2, Trophy } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, Loader2, Trophy, ExternalLink, FileCheck, Sparkles } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
 import type { Achievement, Registration, Suggestion } from '../types';
 
@@ -30,17 +30,42 @@ export default function FacultyReviewVerify() {
   };
 
   const reviewRegistration = async (r: Registration, status: 'approved' | 'rejected') => {
+    let rejectionReason: string | undefined;
+    if (status === 'rejected') {
+      const input = window.prompt('Reason for rejecting this registration (shown to the student):');
+      if (input === null) return; // cancelled
+      rejectionReason = input.trim() || undefined;
+    }
     setBusyId(r.id);
-    try { await api.registrations.review(r.id, status); load(); }
+    try { await api.registrations.review(r.id, status, rejectionReason); load(); }
     catch (err) { setError(err instanceof ApiError ? err.message : 'Failed to review registration.'); }
     finally { setBusyId(null); }
   };
 
-  const verifyAchievement = async (a: Achievement, status: 'approved' | 'rejected') => {
+  const verifyAchievement = async (a: Achievement, status: 'approved' | 'rejected' | 'changes_requested') => {
+    let reviewNotes: string | undefined;
+    if (status !== 'approved') {
+      const promptText = status === 'rejected' ? 'Reason for rejecting this achievement (shown to the student):' : 'What needs to change before this can be approved?';
+      const input = window.prompt(promptText);
+      if (input === null) return; // cancelled
+      reviewNotes = input.trim() || undefined;
+      if (status === 'changes_requested' && !reviewNotes) { setError('A comment is required when requesting changes.'); return; }
+    }
     setBusyId(a.id);
-    try { await api.achievements.verify(a.id, status); load(); }
+    try { await api.achievements.verify(a.id, status, reviewNotes); load(); }
     catch (err) { setError(err instanceof ApiError ? err.message : 'Failed to verify achievement.'); }
     finally { setBusyId(null); }
+  };
+
+  const viewCertificate = async (a: Achievement) => {
+    try {
+      const { blob } = await api.achievements.certificate(a.id);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to open certificate.');
+    }
   };
 
   const pendingSuggestions = suggestions.filter((s) => s.status === 'submitted' || s.status === 'under_review');
@@ -145,6 +170,18 @@ export default function FacultyReviewVerify() {
                             <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-500">{r.participation_mode === 'team' ? 'Team Registration' : 'Solo Registration'}</span>
                             <h3 className="text-lg font-black text-white">{r.hackathon_title}</h3>
                             <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">{r.team_name ?? r.student_name}</p>
+                            {r.external_registration_url ? (
+                              <a
+                                href={r.external_registration_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-yellow-400 hover:underline mt-1"
+                              >
+                                <ExternalLink size={11} /> View submitted proof
+                              </a>
+                            ) : (
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mt-1">No proof link submitted</p>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
@@ -170,24 +207,73 @@ export default function FacultyReviewVerify() {
                 ) : (
                   <div className="space-y-4">
                     {achievements.map((a) => (
-                      <div key={a.id} className="bg-neutral-900 border-2 border-neutral-800 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center shrink-0">
-                            <Trophy size={22} className="text-neutral-500" />
+                      <div key={a.id} className="bg-neutral-900 border-2 border-neutral-800 rounded-2xl p-6 space-y-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center shrink-0">
+                              <Trophy size={22} className="text-neutral-500" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-500">{a.outcome}</span>
+                              <h3 className="text-lg font-black text-white">{a.title}</h3>
+                              <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">{a.student_name}</p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-500">{a.outcome}</span>
-                            <h3 className="text-lg font-black text-white">{a.title}</h3>
-                            <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">{a.student_name}</p>
+                          <div className="flex gap-2 w-full md:w-auto">
+                            <button disabled={busyId === a.id} onClick={() => verifyAchievement(a, 'approved')} className="flex-1 md:flex-none px-5 py-3 bg-yellow-400 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:scale-95 transition-transform disabled:opacity-60">
+                              Verify
+                            </button>
+                            <button disabled={busyId === a.id} onClick={() => verifyAchievement(a, 'changes_requested')} className="flex-1 md:flex-none px-5 py-3 bg-neutral-800 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-neutral-700 transition-colors disabled:opacity-60">
+                              Request Changes
+                            </button>
+                            <button disabled={busyId === a.id} onClick={() => verifyAchievement(a, 'rejected')} className="flex-1 md:flex-none px-5 py-3 bg-neutral-800 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-red-950 hover:text-red-400 transition-colors disabled:opacity-60">
+                              Reject
+                            </button>
                           </div>
                         </div>
-                        <div className="flex gap-2 w-full md:w-auto">
-                          <button disabled={busyId === a.id} onClick={() => verifyAchievement(a, 'approved')} className="flex-1 md:flex-none px-6 py-3 bg-yellow-400 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:scale-95 transition-transform disabled:opacity-60">
-                            Verify
-                          </button>
-                          <button disabled={busyId === a.id} onClick={() => verifyAchievement(a, 'rejected')} className="flex-1 md:flex-none px-6 py-3 bg-neutral-800 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-neutral-700 transition-colors disabled:opacity-60">
-                            Reject
-                          </button>
+
+                        <div className="pt-4 border-t border-neutral-800 flex flex-col md:flex-row gap-4 md:items-start">
+                          <div className="shrink-0">
+                            {a.has_certificate ? (
+                              <button onClick={() => viewCertificate(a)} className="inline-flex items-center gap-1.5 px-4 py-2 bg-black border border-neutral-700 rounded-full text-[10px] font-bold uppercase tracking-widest text-yellow-400 hover:border-yellow-400 transition-colors">
+                                <FileCheck size={12} /> View certificate
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-black border border-neutral-800 rounded-full text-[10px] font-bold uppercase tracking-widest text-red-400">
+                                <AlertCircle size={12} /> No certificate attached
+                              </span>
+                            )}
+                          </div>
+
+                          {a.has_certificate && (
+                            <div className="flex-1 bg-black/50 border border-neutral-800 rounded-xl p-4">
+                              {a.ai_score !== null ? (
+                                <>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 flex items-center gap-1.5"><Sparkles size={12} className="text-yellow-400" /> AI authenticity assist — not a decision</p>
+                                    <span className={`text-xs font-black font-mono ${a.ai_score >= 70 ? 'text-green-500' : a.ai_score >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>{a.ai_score}/100</span>
+                                  </div>
+                                  {a.ai_extraction && (
+                                    <p className="text-[11px] text-neutral-400 mb-2">
+                                      Extracted: <span className="text-white font-semibold">{a.ai_extraction.studentName ?? '—'}</span> · {a.ai_extraction.competitionName ?? '—'} · {a.ai_extraction.organizer ?? '—'} · {a.ai_extraction.date ?? '—'}
+                                    </p>
+                                  )}
+                                  {a.ai_flags.length > 0 && (
+                                    <ul className="text-[11px] text-red-400 space-y-0.5 mb-1">
+                                      {a.ai_flags.map((f, i) => <li key={i}>⚠ {f}</li>)}
+                                    </ul>
+                                  )}
+                                  {a.ai_reasons.length > 0 && (
+                                    <ul className="text-[11px] text-neutral-500 space-y-0.5">
+                                      {a.ai_reasons.map((r, i) => <li key={i}>· {r}</li>)}
+                                    </ul>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">AI assist unavailable for this certificate (GEMINI_API_KEY not configured, or extraction failed) — review manually.</p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

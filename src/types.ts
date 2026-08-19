@@ -8,8 +8,11 @@ export interface AuthUser {
   role: Role;
   status: string;
   avatar_url: string | null;
+  department_code?: string | null;
+  department_name?: string | null;
   programme?: string | null;
   year_of_study?: number | null;
+  section?: string | null;
   interests?: string[] | null;
   tech_stack?: string[] | null;
   student_phone?: string | null;
@@ -106,7 +109,60 @@ export interface CreateHackathonInput {
   status?: 'draft' | 'published';
 }
 
-export type UpdateHackathonInput = Partial<Pick<CreateHackathonInput, 'title' | 'description' | 'mode' | 'registrationClosesAt'>> & { status?: HackathonStatus };
+export interface UpdateHackathonInput {
+  title?: string;
+  organizer?: string;
+  description?: string;
+  shortDescription?: string;
+  mode?: 'online' | 'offline' | 'hybrid';
+  venue?: string;
+  officialUrl?: string;
+  registrationUrl?: string;
+  communityUrl?: string;
+  bannerImageUrl?: string;
+  brochureUrl?: string;
+  prizePool?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  faq?: string;
+  rules?: string;
+  judgingCriteria?: string;
+  problemStatements?: string;
+  domains?: string[];
+  eligibleYears?: number[];
+  minTeamSize?: number;
+  maxTeamSize?: number;
+  soloAllowed?: boolean;
+  registrationOpensAt?: string;
+  registrationClosesAt?: string;
+  startsAt?: string;
+  endsAt?: string;
+  status?: HackathonStatus;
+}
+
+export interface HackathonCategory {
+  id: string;
+  name: string;
+}
+
+export interface Organizer {
+  id: string;
+  name: string;
+}
+
+export interface CreateRoundInput {
+  name: string;
+  sequence: number;
+  startsAt: string;
+  endsAt?: string;
+  instructions?: string;
+}
+
+export type UpdateRoundInput = Partial<CreateRoundInput>;
 
 export interface Team {
   id: string;
@@ -162,6 +218,9 @@ export interface Registration {
   status: 'draft' | 'submitted' | 'pending_verification' | 'approved' | 'rejected' | 'withdrawn';
   submitted_at: string | null;
   created_at: string;
+  // Already returned by GET /registrations/mine's `r.*` — just never declared on this type until
+  // now, so the frontend had no type-safe way to read the reason faculty gave on rejection.
+  rejection_reason: string | null;
 }
 
 export interface CreateRegistrationInput {
@@ -273,7 +332,19 @@ export interface Achievement {
   status: 'pending' | 'approved' | 'changes_requested' | 'rejected';
   verified_by: string | null;
   verified_at: string | null;
+  review_notes: string | null;
   created_at: string;
+  certificate_file_id: string | null;
+  certificate_name?: string | null;
+  certificate_content_type?: string | null;
+  has_certificate: boolean;
+  // AI-assisted verification (Gemini) — advisory only, never an auto-approval. Null until a
+  // certificate has been uploaded and AI verification is configured (GEMINI_API_KEY) and
+  // succeeds; faculty always make the final call via `status`.
+  ai_score: number | null;
+  ai_reasons: string[];
+  ai_flags: string[];
+  ai_extraction: { studentName: string | null; competitionName: string | null; date: string | null; organizer: string | null; certificateNumber: string | null; rawText: string } | null;
 }
 
 export interface CreateAchievementInput {
@@ -305,6 +376,17 @@ export interface TeamInvite {
   name: string;
   description: string | null;
   max_members: number;
+}
+
+export interface TeamDetail extends Omit<Team, 'member_count' | 'members'> {
+  members: TeamMember[];
+}
+
+export interface TeamJoinRequest {
+  user_id: string;
+  full_name: string;
+  email: string;
+  institutional_id: string;
 }
 
 export interface Suggestion {
@@ -376,6 +458,11 @@ export interface AdminDashboardSummary {
   totalParticipations: number;
   totalWins: number;
   flaggedActions: number;
+  // Platform-wide totals (unfiltered) — distinct from activeHackathons/totalParticipations above,
+  // which are filtered by status.
+  totalHackathons: number;
+  totalRegistrations: number;
+  totalTeams: number;
   departmentPerformance: { dept: string; students: number; participations: number; wins: number }[];
   recentWinners: { title: string; outcome: string; achieved_on: string | null; student_name: string; department_code: string | null }[];
 }

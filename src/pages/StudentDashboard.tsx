@@ -41,22 +41,22 @@ export default function StudentDashboard({ onNavigate }: StudentDashboardProps) 
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Student Dashboard</h1>
-        <p className="text-xs text-yellow-400 uppercase tracking-widest font-bold mt-2">Welcome back, {user?.full_name ?? 'Student'}</p>
+      <div className="min-w-0">
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Student Dashboard</h1>
+        <p className="text-xs text-yellow-400 uppercase tracking-widest font-bold mt-2 break-words">Welcome back, {user?.full_name ?? 'Student'}</p>
       </div>
 
       {error && <p className="text-red-400 text-xs font-bold uppercase tracking-widest">{error}</p>}
 
       {urgentRegistration && (
-        <div className="bg-red-500 rounded-[32px] p-6 text-white border-4 border-red-600 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="bg-red-500 rounded-[32px] p-5 sm:p-6 text-white border-4 border-red-600 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center shrink-0">
               <AlertCircle size={24} className="text-red-500" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="font-black uppercase tracking-widest text-lg">Action Required</h2>
-              <p className="text-xs font-bold uppercase tracking-widest mt-1 opacity-90">
+              <p className="text-xs font-bold uppercase tracking-widest mt-1 opacity-90 break-words">
                 Registration for <span className="text-white">{urgentRegistration.hackathon_title}</span> closes {new Date(urgentRegistration.registration_closes_at).toLocaleDateString()}.
               </p>
             </div>
@@ -74,29 +74,30 @@ export default function StudentDashboard({ onNavigate }: StudentDashboardProps) 
           { label: 'Ongoing', value: ongoingCount, icon: Clock, highlight: false },
           { label: 'Upcoming Deadlines', value: upcomingDeadlines.length, icon: AlertCircle, highlight: false },
         ].map((stat) => (
-          <div key={stat.label} className={`${stat.highlight ? 'bg-yellow-400 text-white border-yellow-400' : 'bg-black text-white border-neutral-800'} p-5 rounded-3xl border-2 shadow-lg flex items-center gap-4`}>
-            <div className={`p-3 rounded-2xl ${stat.highlight ? 'bg-neutral-900 text-yellow-400' : 'bg-neutral-800 text-white'}`}>
-              <stat.icon size={24} />
+          <div key={stat.label} className={`${stat.highlight ? 'bg-yellow-400 text-white border-yellow-400' : 'bg-black text-white border-neutral-800'} p-4 sm:p-5 rounded-3xl border-2 shadow-lg flex items-center gap-3 sm:gap-4 min-w-0`}>
+            <div className={`p-2.5 sm:p-3 rounded-2xl shrink-0 ${stat.highlight ? 'bg-neutral-900 text-yellow-400' : 'bg-neutral-800 text-white'}`}>
+              <stat.icon size={22} className="sm:hidden" />
+              <stat.icon size={24} className="hidden sm:block" />
             </div>
-            <div>
-              <p className="text-3xl font-black leading-none font-mono">{stat.value}</p>
-              <p className={`text-[10px] uppercase font-bold tracking-widest mt-1 ${stat.highlight ? 'text-white/70' : 'text-neutral-500'}`}>{stat.label}</p>
+            <div className="min-w-0">
+              <p className="text-2xl sm:text-3xl font-black leading-none font-mono">{stat.value}</p>
+              <p className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-widest mt-1 break-words ${stat.highlight ? 'text-white/70' : 'text-neutral-500'}`}>{stat.label}</p>
             </div>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-black rounded-[32px] border-4 border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-neutral-800 flex justify-between items-center">
-            <h2 className="font-bold text-lg text-white uppercase tracking-widest">My Pipeline</h2>
-            <button onClick={() => onNavigate?.('pipeline')} className="text-[10px] px-4 py-2 bg-neutral-900 text-white rounded-full font-bold uppercase tracking-widest border border-neutral-800 hover:border-yellow-400 transition-colors">
+        <div className="lg:col-span-2 bg-black rounded-[32px] border-4 border-neutral-800 shadow-2xl overflow-hidden flex flex-col min-w-0">
+          <div className="p-4 sm:p-6 border-b border-neutral-800 flex justify-between items-center gap-3">
+            <h2 className="font-bold text-base sm:text-lg text-white uppercase tracking-widest">My Pipeline</h2>
+            <button onClick={() => onNavigate?.('pipeline')} className="text-[10px] px-4 py-2 bg-neutral-900 text-white rounded-full font-bold uppercase tracking-widest border border-neutral-800 hover:border-yellow-400 transition-colors shrink-0">
               View All
             </button>
           </div>
 
           {registrations.length === 0 ? (
-            <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest text-center py-16">No registrations yet — explore hackathons to get started.</p>
+            <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest text-center py-16 px-4 break-words">No registrations yet — explore hackathons to get started.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -132,28 +133,28 @@ export default function StudentDashboard({ onNavigate }: StudentDashboardProps) 
         </div>
 
         <div className="space-y-6">
-          <div className="bg-yellow-400 rounded-[32px] p-6 text-white flex flex-col shadow-lg border-4 border-yellow-500 overflow-hidden">
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-10 h-10 bg-neutral-900 rounded-full flex items-center justify-center">
+          <div className="bg-yellow-400 rounded-[32px] p-5 sm:p-6 text-white flex flex-col shadow-lg border-4 border-yellow-500 overflow-hidden min-w-0">
+            <div className="flex justify-between items-start gap-3 mb-6">
+              <div className="w-10 h-10 bg-neutral-900 rounded-full flex items-center justify-center shrink-0">
                 <div className="w-4 h-4 bg-yellow-400 rotate-45"></div>
               </div>
-              <div className="text-[10px] font-black uppercase tracking-widest">Reminders & Alerts</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-right break-words">Reminders & Alerts</div>
             </div>
-            <div className="space-y-4 flex-1">
+            <div className="space-y-4 flex-1 min-w-0">
               {unreadNotifications.length === 0 ? (
                 <p className="text-sm font-bold text-white/80">You're all caught up.</p>
               ) : unreadNotifications.map((n) => (
-                <div key={n.id} className="flex flex-col gap-2 border-b border-white/10 pb-4 last:border-0">
-                  <div>
-                    <p className="text-sm font-bold leading-snug">{n.title}</p>
-                    {n.body && <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mt-1">{n.body}</p>}
+                <div key={n.id} className="flex flex-col gap-2 border-b border-white/10 pb-4 last:border-0 min-w-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold leading-snug break-words">{n.title}</p>
+                    {n.body && <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mt-1 break-words">{n.body}</p>}
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="bg-black rounded-[32px] border-4 border-neutral-800 shadow-xl p-6 text-white">
+          <div className="bg-black rounded-[32px] border-4 border-neutral-800 shadow-xl p-5 sm:p-6 text-white min-w-0">
             <h3 className="font-black text-lg text-white uppercase tracking-widest mb-4">Quick Actions</h3>
             <div className="space-y-3">
               <button onClick={() => onNavigate?.('explore')} className="w-full py-4 bg-neutral-900 text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:border-yellow-400 border-2 border-transparent transition-all flex items-center justify-center gap-3"><Eye size={16} className="text-neutral-500"/> Explore Hackathons</button>

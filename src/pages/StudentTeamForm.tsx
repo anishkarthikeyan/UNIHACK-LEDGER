@@ -50,7 +50,7 @@ export default function StudentTeamForm({ onNavigate }: StudentTeamFormProps) {
           >
             <ChevronLeft size={14} /> Back to Teams
           </button>
-          <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Create New Team</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Create New Team</h1>
           <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Form a group for upcoming hackathons</p>
         </div>
         <div className="flex gap-4">
@@ -171,7 +171,7 @@ export default function StudentTeamForm({ onNavigate }: StudentTeamFormProps) {
               {[
                 { id: 'invite', label: 'Invite Only', desc: 'You add members manually later.' },
                 { id: 'open', label: 'Open', desc: 'Any student can join directly while there is space.' },
-                { id: 'request', label: 'Request to Join', desc: 'Listed as requestable (approval flow coming soon).' },
+                { id: 'request', label: 'Request to Join', desc: 'Students can request to join; you approve or decline each request.' },
               ].map((opt) => (
                 <label key={opt.id} className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
                   joinMode === opt.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-neutral-800 bg-neutral-900 hover:border-neutral-700'

@@ -2,7 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover is required for env(safe-area-inset-*) to return real values in
+         WKWebView (Capacitor iOS) — without it every safe-area inset silently evaluates to 0px,
+         which is why header content was rendering underneath the status bar/Dynamic Island.
+
+         maximum-scale=1, user-scalable=no is the actual fix for Stage 3.5's "zoomed/clipped"
+         report: without it, pinch/double-tap zoom stays enabled in WKWebView, and — because this
+         is a client-side-routed SPA with no full page reload between screens — a zoom gesture
+         applied on one screen persists into every screen visited afterward (WKWebView never
+         resets scale on a route change). That produces an apparently-random "some screen looks
+         zoomed in and clipped" bug that Chrome's mobile-width emulation can't reproduce, since it
+         doesn't run WebKit's native pinch/double-tap gesture engine. Locking scale to 1 is
+         standard practice for an app-shell (not a content site) and matches Capacitor/Ionic's own
+         boilerplate default. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>My Google AI Studio App</title>
   </head>
   <body>

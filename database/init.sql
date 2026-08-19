@@ -361,6 +361,26 @@ CREATE TABLE schema_migrations (
 );
 INSERT INTO schema_migrations (name) VALUES ('0001_competition_dataset.sql');
 
+-- ---------------------------------------------------------------------------
+-- Phase 1.5 foundation (see database/migrations/0002_phase1_5_foundation.sql
+-- for the same DDL applied idempotently to existing databases via `npm run db:migrate`).
+-- ---------------------------------------------------------------------------
+CREATE INDEX team_members_user_idx ON team_members (user_id);
+CREATE INDEX registrations_student_idx ON registrations (student_id);
+CREATE INDEX projects_owner_idx ON projects (owner_id);
+CREATE INDEX achievements_student_idx ON achievements (student_id);
+
+CREATE TABLE push_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  platform TEXT NOT NULL CHECK (platform IN ('android', 'ios', 'web')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX push_tokens_user_idx ON push_tokens (user_id);
+
+INSERT INTO schema_migrations (name) VALUES ('0002_phase1_5_foundation.sql');
+
 -- Demo password for every seeded account: Demo@123. Replace these with SSO-provisioned accounts in production.
 INSERT INTO departments (code, name) VALUES ('CSE', 'Computer Science and Engineering'), ('IT', 'Information Technology'), ('ECE', 'Electronics and Communication Engineering');
 INSERT INTO users (institutional_id, email, password_hash, full_name, role, department_id)

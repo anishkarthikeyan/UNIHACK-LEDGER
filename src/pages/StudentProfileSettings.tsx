@@ -56,7 +56,7 @@ export default function StudentProfileSettings() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 ">
       <div>
-        <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Profile & Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Profile & Settings</h1>
         <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Manage your account and academic details</p>
       </div>
 
@@ -139,9 +139,11 @@ export default function StudentProfileSettings() {
 
           <div className="bg-black border-4 border-neutral-800 rounded-[32px] p-8">
             <h3 className="font-black uppercase tracking-widest text-lg text-white mb-6 flex items-center gap-2">
-              <Bell size={20} className="text-yellow-400" /> Notifications & Privacy
+              <Bell size={20} className="text-yellow-400" /> Notifications
             </h3>
-            <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Preference toggles are coming soon.</p>
+            <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest leading-relaxed">
+              In-app notifications are always on — check the bell icon or the Notifications tab. Per-channel preferences (email/push opt-out) aren't configurable yet.
+            </p>
           </div>
         </div>
       </div>

@@ -40,15 +40,15 @@ export default function StudentProjectDetail({ onNavigate, projectId }: StudentP
   return (
     <div className="space-y-8 animate-in fade-in duration-500 ">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-neutral-800 pb-8">
-        <div>
+        <div className="min-w-0">
           <button
             onClick={() => onNavigate?.('projects')}
             className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-4 flex items-center gap-1 transition-colors"
           >
             <ChevronLeft size={14} /> Back to Repository
           </button>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-white">{project.title}</h1>
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter uppercase text-white break-words min-w-0">{project.title}</h1>
             <span className="px-3 py-1 bg-yellow-400 text-white font-bold uppercase tracking-widest text-[10px] rounded-full border border-yellow-500">
               {project.visibility}
             </span>

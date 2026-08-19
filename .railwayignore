@@ -1,0 +1,9 @@
+# Only server/ + database/ + root config files are needed to build and run the API service.
+# Everything below is real, tracked-in-git project content that's irrelevant to this specific
+# Railway deploy — excluding it keeps `railway up` fast and avoids uploading ~60MB of native
+# mobile project files for a Node/Express build.
+android/
+ios/
+docs/
+.idea/
+*.md

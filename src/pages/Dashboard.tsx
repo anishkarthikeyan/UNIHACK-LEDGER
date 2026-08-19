@@ -1,40 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Users, FileCheck, Clock, Eye, Loader2 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
+import { Calendar, Users, FileCheck, Clock, Eye, Loader2, BarChart3, AlertCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import type { Hackathon } from '../types';
+import type { Hackathon, Registration } from '../types';
 import type { NavigateFn } from '../App';
 
 interface DashboardProps {
   onNavigate?: NavigateFn;
 }
 
-const CHART_DATA = [
-  { name: 'Jan', CSE: 120, IT: 80, ECE: 40 },
-  { name: 'Feb', CSE: 150, IT: 100, ECE: 60 },
-  { name: 'Mar', CSE: 180, IT: 120, ECE: 90 },
-  { name: 'Apr', CSE: 250, IT: 160, ECE: 110 },
-  { name: 'May', CSE: 320, IT: 210, ECE: 150 },
-  { name: 'Jun', CSE: 400, IT: 280, ECE: 190 },
-];
-
-const WINNING_DATA = [
-  { department: 'CSE', first: 12, second: 18, third: 10 },
-  { department: 'IT', first: 8, second: 12, third: 15 },
-  { department: 'ECE', first: 5, second: 8, third: 12 },
-  { department: 'MECH', first: 2, second: 4, third: 5 },
-];
-
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { user } = useAuth();
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  // Same endpoint FacultyReviewVerify already queries for its "Registrations" tab — reused here
+  // rather than adding a new one, so the dashboard stat and the review queue can never disagree.
+  const [pendingRegistrations, setPendingRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.hackathons.list()
-      .then(setHackathons)
+    Promise.all([api.hackathons.list(), api.registrations.list('pending_verification')])
+      .then(([h, r]) => { setHackathons(h); setPendingRegistrations(r); })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load dashboard.'))
       .finally(() => setLoading(false));
   }, []);
@@ -67,6 +53,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           { label: 'Students Interested', value: totalInterested, icon: Users },
           { label: 'Students Registered', value: totalRegistered, icon: FileCheck },
           { label: 'Deadlines This Week', value: deadlinesThisWeek, icon: Clock },
+          { label: 'Pending Registrations', value: pendingRegistrations.length, icon: AlertCircle, highlight: pendingRegistrations.length > 0 },
         ].map((stat) => (
           <div key={stat.label} className={`${stat.highlight ? 'bg-yellow-400 text-white border-yellow-400' : 'bg-black text-white border-neutral-800'} p-5 rounded-3xl border-2 shadow-lg flex items-center gap-4`}>
             <div className={`p-3 rounded-2xl ${stat.highlight ? 'bg-neutral-900 text-yellow-400' : 'bg-neutral-800 text-white'}`}>
@@ -80,65 +67,18 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-black rounded-[32px] border-4 border-neutral-800 shadow-2xl p-6">
-          <h2 className="font-bold text-lg text-yellow-400 uppercase tracking-widest mb-6">Participation Growth</h2>
-          <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-4">Sample analytics — full reporting coming soon</p>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={CHART_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorCSE" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#facc15" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#facc15" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorIT" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorECE" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#a78bfa" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                <XAxis dataKey="name" stroke="#666" tick={{ fill: '#888', fontSize: 12, fontWeight: 'bold' }} tickMargin={10} axisLine={false} tickLine={false} />
-                <YAxis stroke="#666" tick={{ fill: '#888', fontSize: 12, fontWeight: 'bold' }} tickMargin={10} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '12px', fontWeight: 'bold', color: '#fff' }}
-                  itemStyle={{ fontWeight: 'bold' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 'bold', color: '#888' }} />
-                <Area type="monotone" dataKey="CSE" stroke="#facc15" strokeWidth={3} fillOpacity={1} fill="url(#colorCSE)" />
-                <Area type="monotone" dataKey="IT" stroke="#60a5fa" strokeWidth={3} fillOpacity={1} fill="url(#colorIT)" />
-                <Area type="monotone" dataKey="ECE" stroke="#a78bfa" strokeWidth={3} fillOpacity={1} fill="url(#colorECE)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+      <button
+        onClick={() => onNavigate?.('reports')}
+        className="w-full bg-black rounded-[32px] border-4 border-neutral-800 shadow-2xl p-10 flex flex-col items-center justify-center text-center gap-3 hover:border-yellow-400 transition-colors"
+      >
+        <div className="w-14 h-14 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-yellow-400">
+          <BarChart3 size={26} />
         </div>
-
-        <div className="bg-black rounded-[32px] border-4 border-neutral-800 shadow-2xl p-6">
-          <h2 className="font-bold text-lg text-yellow-400 uppercase tracking-widest mb-6">Winning Analytics</h2>
-          <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-4">Sample analytics — full reporting coming soon</p>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={WINNING_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                <XAxis dataKey="department" stroke="#666" tick={{ fill: '#888', fontSize: 12, fontWeight: 'bold' }} tickMargin={10} axisLine={false} tickLine={false} />
-                <YAxis stroke="#666" tick={{ fill: '#888', fontSize: 12, fontWeight: 'bold' }} tickMargin={10} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '12px', fontWeight: 'bold', color: '#fff' }}
-                  cursor={{ fill: '#222' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 'bold', color: '#888' }} />
-                <Bar dataKey="first" name="1st Place" fill="#facc15" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="second" name="2nd Place" fill="#a78bfa" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="third" name="3rd Place" fill="#60a5fa" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+        <h2 className="font-bold text-lg text-white uppercase tracking-widest">Analytics &amp; Reports</h2>
+        <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest max-w-md">
+          Department participation trends, verified winning breakdowns, and exportable summaries — open Reports &rarr;
+        </p>
+      </button>
 
       <div className="bg-black rounded-[32px] border-4 border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
         <div className="p-6 border-b border-neutral-800 flex justify-between items-center">

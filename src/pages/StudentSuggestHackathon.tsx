@@ -70,7 +70,7 @@ export default function StudentSuggestHackathon({ onNavigate }: StudentSuggestHa
     <div className="space-y-8 animate-in fade-in duration-500 w-full h-full flex flex-col">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white mb-2 break-words">
             Suggest a <span className="text-neutral-500">Hackathon</span>
           </h1>
           <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest max-w-xl">

@@ -7,7 +7,6 @@ export default function AdminSystemSettings() {
   const [academicYear, setAcademicYear] = useState('2025-2026');
   const [defaultSemester, setDefaultSemester] = useState('even');
   const [roleEscalationConfirmation, setRoleEscalationConfirmation] = useState(true);
-  const [ssoAutoProvisioning, setSsoAutoProvisioning] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +23,6 @@ export default function AdminSystemSettings() {
         if (typeof settings.academic_year === 'string') setAcademicYear(settings.academic_year);
         if (typeof settings.default_semester === 'string') setDefaultSemester(settings.default_semester);
         if (typeof settings.role_escalation_confirmation === 'boolean') setRoleEscalationConfirmation(settings.role_escalation_confirmation);
-        if (typeof settings.sso_auto_provisioning === 'boolean') setSsoAutoProvisioning(settings.sso_auto_provisioning);
         setDepartments(depts);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load settings.'))
@@ -42,7 +40,6 @@ export default function AdminSystemSettings() {
         academic_year: academicYear,
         default_semester: defaultSemester,
         role_escalation_confirmation: roleEscalationConfirmation,
-        sso_auto_provisioning: ssoAutoProvisioning,
       });
       setSaved(true);
     } catch (err) {
@@ -118,14 +115,7 @@ export default function AdminSystemSettings() {
                 <input type="checkbox" checked={roleEscalationConfirmation} onChange={(e) => setRoleEscalationConfirmation(e.target.checked)} className="w-5 h-5 accent-yellow-400" />
                 <div>
                   <p className="font-bold text-white">Require confirmation for role escalation</p>
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 mt-1">Warn before making someone a Faculty or Admin</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-4 p-4 bg-neutral-900 border-2 border-neutral-800 rounded-2xl cursor-pointer hover:border-yellow-400 transition-colors">
-                <input type="checkbox" checked={ssoAutoProvisioning} onChange={(e) => setSsoAutoProvisioning(e.target.checked)} className="w-5 h-5 accent-yellow-400" />
-                <div>
-                  <p className="font-bold text-white">Enable auto-provisioning via SSO</p>
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 mt-1">Automatically create student accounts on first login</p>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 mt-1">When on, promoting a user to Faculty or Admin in User Management requires an extra confirmation step</p>
                 </div>
               </label>
             </div>

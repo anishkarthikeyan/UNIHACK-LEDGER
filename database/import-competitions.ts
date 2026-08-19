@@ -59,37 +59,54 @@ interface Summary {
   eligibilityRowsWritten: number;
 }
 
-// --- CSV parsing (RFC 4180-ish: quoted fields, embedded commas, "" escapes) ---
-
-function parseCsvLine(line: string): string[] {
-  const fields: string[] = [];
+// --- CSV parsing (RFC 4180: quoted fields, embedded commas, embedded newlines, "" escapes) ---
+//
+// Splitting the file into lines with String.split(/\r?\n/) BEFORE parsing quotes — the original
+// approach here — corrupts any row whose quoted field contains a real line break. This sheet has
+// exactly that: row 30 (IndiaSkills Competition 2026-2027) wraps its Organizer field across two
+// physical lines, and row 39 (Open Sandbox Development Workshop & / 0xCON 2026) wraps its
+// Competition Name field the same way. Splitting first turns each into two broken rows — one
+// with an unterminated quote that silently swallows the next several fields into one giant
+// string, the other a fragment with a blank name that gets skipped as "invalid". Confirmed
+// empirically: the line-split version reported 149 "rows" (146 real + 1 footer + 2 corrupt
+// fragments) with a phantom insert, instead of the correct 146 + 1 footer.
+//
+// The fix: tokenize the whole file in one pass, character by character, and only treat a
+// newline as a row boundary when we are NOT inside an open quote.
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
   let cur = '';
   let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+  let i = 0;
+  const n = text.length;
+  const endField = () => { row.push(cur); cur = ''; };
+  const endRow = () => { endField(); rows.push(row); row = []; };
+  while (i < n) {
+    const ch = text[i];
     if (inQuotes) {
       if (ch === '"') {
-        if (line[i + 1] === '"') { cur += '"'; i++; }
-        else inQuotes = false;
-      } else cur += ch;
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ',') {
-      fields.push(cur);
-      cur = '';
-    } else {
-      cur += ch;
+        if (text[i + 1] === '"') { cur += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      cur += ch; i++; continue;
     }
+    if (ch === '"') { inQuotes = true; i++; continue; }
+    if (ch === ',') { endField(); i++; continue; }
+    if (ch === '\r') { i++; continue; } // normalize CRLF — the \n right after ends the row
+    if (ch === '\n') { endRow(); i++; continue; }
+    cur += ch; i++;
   }
-  fields.push(cur);
-  return fields.map((f) => f.trim());
+  // Final row, if the file doesn't end with a trailing newline.
+  if (cur !== '' || row.length > 0) endRow();
+  return rows.map((r) => r.map((f) => f.trim()));
 }
 
 function loadRows(): ImportRow[] {
   const text = readFileSync(csvPath, 'utf8');
-  const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
-  // Row 1 is a title-only row, row 2 is the real header (see task brief).
-  const header = parseCsvLine(lines[1]);
+  const allRows = parseCsv(text).filter((r) => !(r.length === 1 && r[0] === ''));
+  // Row 1 (index 0) is a title-only row, row 2 (index 1) is the real header (see task brief).
+  const header = allRows[1];
   const mismatched = header.some((h, i) => h !== EXPECTED_HEADER[i]);
   if (mismatched) {
     console.warn('Warning: CSV header does not exactly match the expected columns. Proceeding by position anyway.');
@@ -98,8 +115,8 @@ function loadRows(): ImportRow[] {
   }
 
   const rows: ImportRow[] = [];
-  for (let i = 2; i < lines.length; i++) {
-    const f = parseCsvLine(lines[i]);
+  for (let i = 2; i < allRows.length; i++) {
+    const f = allRows[i];
     if (f.every((v) => v === '')) continue;
     rows.push({
       lineNumber: i + 1,
@@ -164,6 +181,22 @@ function splitList(raw: string, separator: RegExp): string[] {
   return raw.split(separator).map((s) => s.trim()).filter(Boolean);
 }
 
+// The sheet's Category column mixes full words with single-letter shorthand ("C + P", "C + I")
+// and inconsistent casing/hyphenation ("Start-up" vs "Start-Up") — verified against every
+// distinct raw value actually in the sheet (Stage 0 audit): every "C + P" row's prize column
+// mentions PPO/PPI (Pre-Placement Offer/Interview), so "P" = Placement, not "Program"/"Prize".
+// Without this, the DB would end up with "C"/"P"/"I" sitting next to "Competition"/"Internship"
+// as distinct categories, and "Start-up"/"Start-Up" as two different ones purely from casing.
+const CATEGORY_ALIASES: Record<string, string> = {
+  c: 'Competition', competition: 'Competition',
+  p: 'Placement', placement: 'Placement',
+  i: 'Internship', internship: 'Internship',
+  'start-up': 'Startup', 'start up': 'Startup', startup: 'Startup',
+};
+function normalizeCategory(token: string): string {
+  return CATEGORY_ALIASES[token.trim().toLowerCase()] ?? token.trim();
+}
+
 interface Eligibility { year: number | null; label: string | null }
 
 function parseEligibility(raw: string): Eligibility[] {
@@ -193,93 +226,187 @@ function classifyStatus(regClosesAt: string | null, roundDates: (string | null)[
   return 'completed';
 }
 
-async function getOrCreate(client: PoolClient, table: 'hackathon_categories' | 'organizers', name: string, createdTracker: Set<string>): Promise<string> {
-  const existing = await client.query(`SELECT id FROM ${table} WHERE name = $1`, [name]);
-  if (existing.rows[0]) return existing.rows[0].id;
-  const inserted = await client.query(`INSERT INTO ${table} (name) VALUES ($1) RETURNING id`, [name]);
-  createdTracker.add(name);
-  return inserted.rows[0].id;
+/** One fully-transformed, ready-to-write row — the exact same per-row transform logic as
+ * before, just computed up front so the write phase below can operate on the whole dataset at
+ * once instead of one row at a time. */
+interface PreparedRow {
+  row: ImportRow;
+  name: string;
+  organizerRaw: string;
+  externalRef: string;
+  slug: string;
+  description: string;
+  status: string;
+  regClosesAt: string | null;
+  r1: string | null;
+  r2: string | null;
+  final: string | null;
+  eligibility: Eligibility[];
+  categories: string[];
+  organizers: string[];
 }
 
-async function importRow(client: PoolClient, row: ImportRow, summary: Summary): Promise<void> {
+function prepareRow(row: ImportRow, summary: Summary): PreparedRow | null {
   const name = row.name.trim();
   if (!name) {
     summary.skipped.push({ line: row.lineNumber, name: '(blank)', reason: 'Missing competition name.' });
-    return;
+    return null;
   }
-
   const organizerRaw = row.organizer.trim() || 'Unknown Organizer';
   const externalRef = `csv:${stableKey(`${name}|${organizerRaw}`)}`;
-
   const regClosesAt = parseSheetDate(row.regDeadline);
   const r1 = parseSheetDate(row.r1Date);
   const r2 = parseSheetDate(row.r2Date);
   const final = parseSheetDate(row.competitionDate);
-
   const eligibility = parseEligibility(row.eligibleYear);
-  const eligibleYears = eligibility.filter((e) => e.year !== null).map((e) => e.year as number).sort((a, b) => a - b);
-  const categories = splitList(row.category, /\+/);
+  const categories = Array.from(new Set(splitList(row.category, /\+/).map(normalizeCategory)));
   const organizers = splitList(organizerRaw, /,/);
-
   const status = classifyStatus(regClosesAt, [r1, r2, final]);
   const description = `${name} — organized by ${organizerRaw}. Imported from the institution's competition tracking sheet; full details will be added once the source workbook is available.`;
+  return {
+    row, name, organizerRaw, externalRef, slug: `${baseSlug(name)}-${stableKey(externalRef).slice(-8)}`,
+    description, status, regClosesAt, r1, r2, final, eligibility, categories, organizers,
+  };
+}
+
+/** Bulk-writes the whole dataset in a small, fixed number of set-based statements instead of
+ * ~15 round trips per row (upsert + delete/insert for categories, organizers, eligibility,
+ * rounds — each individually parameterized). That per-row approach is fine against a local
+ * database, but against a remote one (e.g. Railway over the CLI's SSH tunnel) 146 rows × ~15
+ * round trips is ~2,200 round trips, and at real internet latency that's the difference between
+ * a two-minute run and one that's still not done after two hours (observed directly running
+ * this importer against Railway). Every statement here is still a plain upsert/replace over
+ * `unnest()`-expanded arrays — same semantics, same idempotency, same final data, just batched.
+ * `eligible_years` on `hackathons` is deliberately left out of the bulk upsert itself (a per-row
+ * smallint[] can't be batched as a rectangular array parameter when rows have different lengths)
+ * and is instead derived afterward straight from the `hackathon_eligibility` rows this same run
+ * just wrote — same result, no ragged-array problem. */
+async function writeAll(client: PoolClient, prepared: PreparedRow[], summary: Summary): Promise<void> {
+  if (!prepared.length) return;
 
   const upsert = await client.query(
     `INSERT INTO hackathons (
        title, slug, organizer, description, mode, registration_closes_at,
-       eligible_years, status, external_ref, external_status,
+       status, external_ref, external_status,
        external_registered_teams, external_registered_students, source, prize_pool
-     ) VALUES ($1,$2,$3,$4,'hybrid',$5,$6,$7,$8,$9,$10,$11,'csv_import',$12)
+     )
+     SELECT title, slug, organizer, description, 'hybrid', registration_closes_at,
+       status::hackathon_status, external_ref, external_status,
+       external_registered_teams, external_registered_students, 'csv_import', prize_pool
+     FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::timestamptz[], $6::text[], $7::text[], $8::text[], $9::int[], $10::int[], $11::text[])
+       AS t(title, slug, organizer, description, registration_closes_at, status, external_ref, external_status, external_registered_teams, external_registered_students, prize_pool)
      ON CONFLICT (external_ref) DO UPDATE SET
        title = EXCLUDED.title, organizer = EXCLUDED.organizer, description = EXCLUDED.description,
-       registration_closes_at = EXCLUDED.registration_closes_at, eligible_years = EXCLUDED.eligible_years,
-       status = EXCLUDED.status, external_status = EXCLUDED.external_status,
-       external_registered_teams = EXCLUDED.external_registered_teams,
-       external_registered_students = EXCLUDED.external_registered_students,
-       prize_pool = EXCLUDED.prize_pool, updated_at = now()
-     RETURNING id, (xmax = 0) AS inserted`,
+       registration_closes_at = EXCLUDED.registration_closes_at, status = EXCLUDED.status,
+       external_status = EXCLUDED.external_status, external_registered_teams = EXCLUDED.external_registered_teams,
+       external_registered_students = EXCLUDED.external_registered_students, prize_pool = EXCLUDED.prize_pool,
+       updated_at = now()
+     RETURNING id, external_ref, (xmax = 0) AS inserted`,
     [
-      name, `${baseSlug(name)}-${stableKey(externalRef).slice(-8)}`, organizerRaw, description,
-      regClosesAt, eligibleYears, status, externalRef, nullIfBlank(row.status),
-      parseIntOrNull(row.regTeams), parseIntOrNull(row.regStudents), nullIfBlank(row.prizeAmount),
+      prepared.map((r) => r.name),
+      prepared.map((r) => r.slug),
+      prepared.map((r) => r.organizerRaw),
+      prepared.map((r) => r.description),
+      prepared.map((r) => r.regClosesAt),
+      prepared.map((r) => r.status),
+      prepared.map((r) => r.externalRef),
+      prepared.map((r) => nullIfBlank(r.row.status)),
+      prepared.map((r) => parseIntOrNull(r.row.regTeams)),
+      prepared.map((r) => parseIntOrNull(r.row.regStudents)),
+      prepared.map((r) => nullIfBlank(r.row.prizeAmount)),
     ],
   );
-  const hackathonId = upsert.rows[0].id as string;
-  if (upsert.rows[0].inserted) summary.inserted++; else summary.updated++;
+  const idByExternalRef = new Map<string, string>();
+  for (const r of upsert.rows) {
+    idByExternalRef.set(r.external_ref, r.id);
+    if (r.inserted) summary.inserted++; else summary.updated++;
+  }
+  const touchedIds = upsert.rows.map((r) => r.id as string);
 
-  // Categories: replace the link set so a re-import reflects the sheet's current values.
-  await client.query('DELETE FROM hackathon_category_links WHERE hackathon_id = $1', [hackathonId]);
-  for (const categoryName of categories) {
-    const categoryId = await getOrCreate(client, 'hackathon_categories', categoryName, summary.categoriesCreated);
-    await client.query('INSERT INTO hackathon_category_links (hackathon_id, category_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [hackathonId, categoryId]);
+  // Categories/organizers: resolve-or-create every distinct name once (not once per row), then
+  // replace the full link set for every touched hackathon in one delete + one bulk insert.
+  async function resolveLookupTable(table: 'hackathon_categories' | 'organizers', names: string[], createdTracker: Set<string>): Promise<Map<string, string>> {
+    const idByName = new Map<string, string>();
+    if (!names.length) return idByName;
+    const { rows: existing } = await client.query(`SELECT id, name FROM ${table} WHERE name = ANY($1::text[])`, [names]);
+    for (const row of existing) idByName.set(row.name, row.id);
+    const missing = names.filter((n) => !idByName.has(n));
+    if (missing.length) {
+      const { rows: created } = await client.query(`INSERT INTO ${table} (name) SELECT * FROM unnest($1::text[]) RETURNING id, name`, [missing]);
+      for (const row of created) { idByName.set(row.name, row.id); createdTracker.add(row.name); }
+    }
+    return idByName;
   }
 
-  // Organizers: same replace-in-place approach.
-  await client.query('DELETE FROM hackathon_organizers WHERE hackathon_id = $1', [hackathonId]);
-  for (const organizerName of organizers) {
-    const organizerId = await getOrCreate(client, 'organizers', organizerName, summary.organizersCreated);
-    await client.query('INSERT INTO hackathon_organizers (hackathon_id, organizer_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [hackathonId, organizerId]);
+  const categoryIdByName = await resolveLookupTable('hackathon_categories', Array.from(new Set(prepared.flatMap((r) => r.categories))), summary.categoriesCreated);
+  await client.query('DELETE FROM hackathon_category_links WHERE hackathon_id = ANY($1::uuid[])', [touchedIds]);
+  {
+    const hackathonIds: string[] = []; const categoryIds: string[] = [];
+    for (const r of prepared) {
+      const hid = idByExternalRef.get(r.externalRef)!;
+      for (const c of r.categories) { hackathonIds.push(hid); categoryIds.push(categoryIdByName.get(c)!); }
+    }
+    if (hackathonIds.length) await client.query('INSERT INTO hackathon_category_links (hackathon_id, category_id) SELECT * FROM unnest($1::uuid[], $2::uuid[])', [hackathonIds, categoryIds]);
   }
 
-  // Eligibility.
-  await client.query('DELETE FROM hackathon_eligibility WHERE hackathon_id = $1', [hackathonId]);
-  for (const e of eligibility) {
-    await client.query('INSERT INTO hackathon_eligibility (hackathon_id, year, label) VALUES ($1,$2,$3)', [hackathonId, e.year, e.label]);
-    summary.eligibilityRowsWritten++;
+  const organizerIdByName = await resolveLookupTable('organizers', Array.from(new Set(prepared.flatMap((r) => r.organizers))), summary.organizersCreated);
+  await client.query('DELETE FROM hackathon_organizers WHERE hackathon_id = ANY($1::uuid[])', [touchedIds]);
+  {
+    const hackathonIds: string[] = []; const organizerIds: string[] = [];
+    for (const r of prepared) {
+      const hid = idByExternalRef.get(r.externalRef)!;
+      for (const o of r.organizers) { hackathonIds.push(hid); organizerIds.push(organizerIdByName.get(o)!); }
+    }
+    if (hackathonIds.length) await client.query('INSERT INTO hackathon_organizers (hackathon_id, organizer_id) SELECT * FROM unnest($1::uuid[], $2::uuid[])', [hackathonIds, organizerIds]);
   }
 
-  // Timeline: Round 1 / Round 2 / Final, reusing the existing (previously unused) hackathon_rounds table.
-  await client.query('DELETE FROM hackathon_rounds WHERE hackathon_id = $1 AND sequence IN (1,2,3)', [hackathonId]);
-  const rounds: { sequence: number; name: string; startsAt: string | null }[] = [
-    { sequence: 1, name: 'Round 1', startsAt: r1 },
-    { sequence: 2, name: 'Round 2', startsAt: r2 },
-    { sequence: 3, name: 'Final', startsAt: final },
-  ];
-  for (const round of rounds) {
-    if (!round.startsAt) continue;
-    await client.query('INSERT INTO hackathon_rounds (hackathon_id, name, sequence, starts_at) VALUES ($1,$2,$3,$4)', [hackathonId, round.name, round.sequence, round.startsAt]);
-    summary.roundsWritten++;
+  // Eligibility: one delete + one bulk insert for every (hackathon, year|label) row across the
+  // whole dataset.
+  await client.query('DELETE FROM hackathon_eligibility WHERE hackathon_id = ANY($1::uuid[])', [touchedIds]);
+  {
+    const hackathonIds: string[] = []; const years: (number | null)[] = []; const labels: (string | null)[] = [];
+    for (const r of prepared) {
+      const hid = idByExternalRef.get(r.externalRef)!;
+      for (const e of r.eligibility) { hackathonIds.push(hid); years.push(e.year); labels.push(e.label); }
+    }
+    if (hackathonIds.length) {
+      await client.query('INSERT INTO hackathon_eligibility (hackathon_id, year, label) SELECT * FROM unnest($1::uuid[], $2::smallint[], $3::text[])', [hackathonIds, years, labels]);
+      summary.eligibilityRowsWritten = hackathonIds.length;
+    }
   }
+
+  // Timeline: Round 1 / Round 2 / Final, reusing the existing (previously unused) hackathon_rounds
+  // table — same delete + bulk-insert pattern, skipping any round with no date exactly as before.
+  await client.query('DELETE FROM hackathon_rounds WHERE hackathon_id = ANY($1::uuid[]) AND sequence IN (1,2,3)', [touchedIds]);
+  {
+    const hackathonIds: string[] = []; const names: string[] = []; const sequences: number[] = []; const startsAts: string[] = [];
+    for (const r of prepared) {
+      const hid = idByExternalRef.get(r.externalRef)!;
+      const rounds: { sequence: number; name: string; startsAt: string | null }[] = [
+        { sequence: 1, name: 'Round 1', startsAt: r.r1 },
+        { sequence: 2, name: 'Round 2', startsAt: r.r2 },
+        { sequence: 3, name: 'Final', startsAt: r.final },
+      ];
+      for (const round of rounds) {
+        if (!round.startsAt) continue;
+        hackathonIds.push(hid); names.push(round.name); sequences.push(round.sequence); startsAts.push(round.startsAt);
+      }
+    }
+    if (hackathonIds.length) {
+      await client.query('INSERT INTO hackathon_rounds (hackathon_id, name, sequence, starts_at) SELECT * FROM unnest($1::uuid[], $2::text[], $3::smallint[], $4::timestamptz[])', [hackathonIds, names, sequences, startsAts]);
+      summary.roundsWritten = hackathonIds.length;
+    }
+  }
+
+  // eligible_years is derived straight from the eligibility rows just written — rows with no
+  // numeric year (only a label, e.g. "StartUp") simply never appear in `sub` and keep the
+  // column's '{}' default, matching what the row-by-row version produced.
+  await client.query(
+    `UPDATE hackathons h SET eligible_years = sub.years
+     FROM (SELECT hackathon_id, array_agg(year ORDER BY year) AS years FROM hackathon_eligibility WHERE hackathon_id = ANY($1::uuid[]) AND year IS NOT NULL GROUP BY hackathon_id) sub
+     WHERE h.id = sub.hackathon_id`,
+    [touchedIds],
+  );
 }
 
 async function main() {
@@ -300,7 +427,7 @@ async function main() {
       if (!row.name.trim()) { summary.skipped.push({ line: row.lineNumber, name: '(blank)', reason: 'Missing competition name.' }); continue; }
       const regClosesAt = parseSheetDate(row.regDeadline);
       const eligibility = parseEligibility(row.eligibleYear);
-      const categories = splitList(row.category, /\+/);
+      const categories = Array.from(new Set(splitList(row.category, /\+/).map(normalizeCategory)));
       const organizers = splitList(row.organizer.trim() || 'Unknown Organizer', /,/);
       categories.forEach((c) => summary.categoriesCreated.add(c));
       organizers.forEach((o) => summary.organizersCreated.add(o));
@@ -315,21 +442,21 @@ async function main() {
     return;
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgresql://unihack:unihack_local_password@127.0.0.1:5433/unihack_ledger' });
-  for (const row of rows) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await importRow(client, row, summary);
-      await client.query('COMMIT');
-    } catch (err) {
-      await client.query('ROLLBACK');
-      summary.skipped.push({ line: row.lineNumber, name: row.name || '(blank)', reason: err instanceof Error ? err.message : String(err) });
-    } finally {
-      client.release();
-    }
+  const prepared = rows.map((row) => prepareRow(row, summary)).filter((r): r is PreparedRow => r !== null);
+
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgresql://unihack:unihack_local_password@127.0.0.1:5432/unihack_ledger' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await writeAll(client, prepared, summary);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+    await pool.end();
   }
-  await pool.end();
   printSummary(summary, false);
 }
 

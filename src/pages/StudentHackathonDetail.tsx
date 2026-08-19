@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, Calendar, Users, CheckCircle2, AlertCircle, Clock, MapPin, Star, Check, Loader2, Bookmark, Trophy, Tag, Building2, Link as LinkIcon } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
-import type { Hackathon } from '../types';
+import { deriveExploreStatus, registrationSubtext, ctaLabelFor, STATUS_BADGE_CLASS } from '../lib/hackathonStatus';
+import type { Hackathon, Registration } from '../types';
 import type { NavigateFn } from '../App';
 
 interface StudentHackathonDetailProps {
@@ -11,6 +12,7 @@ interface StudentHackathonDetailProps {
 
 export default function StudentHackathonDetail({ onNavigate, hackathonId }: StudentHackathonDetailProps) {
   const [hackathon, setHackathon] = useState<Hackathon | null>(null);
+  const [existingRegistration, setExistingRegistration] = useState<Registration | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -20,8 +22,15 @@ export default function StudentHackathonDetail({ onNavigate, hackathonId }: Stud
     if (!hackathonId) { setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
-    api.hackathons.get(hackathonId)
-      .then((h) => { if (!cancelled) setHackathon(h); })
+    // Same "already registered" check StudentRegistration.tsx uses (api.registrations.mine(),
+    // ignoring rejected/withdrawn) — purely presentational here (a heads-up before the student
+    // navigates), the backend and StudentRegistration remain the actual source of truth.
+    Promise.all([api.hackathons.get(hackathonId), api.registrations.mine()])
+      .then(([h, mine]) => {
+        if (cancelled) return;
+        setHackathon(h);
+        setExistingRegistration(mine.find((r) => r.hackathon_id === hackathonId && r.status !== 'rejected' && r.status !== 'withdrawn') ?? null);
+      })
       .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load hackathon.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -74,10 +83,15 @@ export default function StudentHackathonDetail({ onNavigate, hackathonId }: Stud
   const eligibilityYears = hackathon.eligibility.filter((e) => e.year !== null).map((e) => e.year as number).sort((a, b) => a - b);
   const eligibilityLabels = hackathon.eligibility.filter((e) => e.label !== null).map((e) => e.label as string);
 
+  // Same live status model Explore uses (src/lib/hackathonStatus.ts) — one source of truth, so
+  // this page can never show a different state than the card the student tapped in from.
+  const es = deriveExploreStatus(hackathon);
+  const isRegistrable = es.filterBucket === 'OPEN' || es.filterBucket === 'CLOSING SOON';
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 ">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-neutral-800 pb-8">
-        <div>
+        <div className="min-w-0">
           <button
             onClick={() => onNavigate?.('explore')}
             className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-4 flex items-center gap-1 transition-colors"
@@ -86,9 +100,12 @@ export default function StudentHackathonDetail({ onNavigate, hackathonId }: Stud
           </button>
 
           <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase text-white">{hackathon.title}</h1>
-            <span className="px-3 py-1 bg-yellow-400 text-white font-bold uppercase tracking-widest text-[10px] rounded-full border border-yellow-500 mt-2">
-              {hackathon.status.replace(/_/g, ' ')}
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tighter uppercase text-white break-words">{hackathon.title}</h1>
+            <span className={`px-3 py-1 font-bold uppercase tracking-widest text-[10px] rounded-full mt-2 ${STATUS_BADGE_CLASS[es.key]}`}>
+              {es.label}
+            </span>
+            <span className="px-3 py-1 bg-neutral-900 text-green-500 font-bold uppercase tracking-widest text-[10px] rounded-full border border-neutral-800 mt-2">
+              {registrationSubtext(es, hackathon)}
             </span>
             {hackathon.external_status && (
               <span className="px-3 py-1 bg-neutral-900 text-neutral-300 font-bold uppercase tracking-widest text-[10px] rounded-full border border-neutral-700 mt-2">
@@ -124,12 +141,34 @@ export default function StudentHackathonDetail({ onNavigate, hackathonId }: Stud
           >
             {hackathon.interested ? <Check size={16} /> : <Star size={16} />} {hackathon.interested ? 'Interested' : 'Mark Interested'}
           </button>
-          <button
-            onClick={() => onNavigate?.('hackathon-register', hackathon.id)}
-            className="px-8 py-4 bg-yellow-400 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform shadow-lg flex items-center justify-center gap-2"
-          >
-            Register Now
-          </button>
+          {existingRegistration ? (
+            <div className="flex flex-col items-stretch sm:items-end gap-2">
+              <span className="px-8 py-4 bg-neutral-900 border-2 border-yellow-400 text-yellow-400 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                <CheckCircle2 size={14} /> Already Registered
+              </span>
+              <button
+                onClick={() => onNavigate?.('pipeline')}
+                className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 transition-colors"
+              >
+                View in Pipeline
+              </button>
+            </div>
+          ) : isRegistrable ? (
+            <button
+              onClick={() => onNavigate?.('hackathon-register', hackathon.id)}
+              className="px-8 py-4 bg-yellow-400 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform shadow-lg flex items-center justify-center gap-2"
+            >
+              Register Now
+            </button>
+          ) : (
+            <button
+              disabled
+              title={registrationSubtext(es, hackathon)}
+              className="px-8 py-4 bg-neutral-900 border-2 border-neutral-800 text-neutral-500 rounded-full text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {ctaLabelFor(es)}
+            </button>
+          )}
         </div>
       </div>
 
@@ -273,7 +312,7 @@ export default function StudentHackathonDetail({ onNavigate, hackathonId }: Stud
                 <Trophy size={18} className="text-yellow-400" />
                 <h3 className="font-black uppercase tracking-widest text-sm text-white">Prize Pool</h3>
               </div>
-              <p className="text-2xl font-black font-mono text-white">{hackathon.prize_pool}</p>
+              <p className="text-lg sm:text-2xl font-black font-mono text-white break-words">{hackathon.prize_pool}</p>
             </div>
           )}
 

@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // database/migrations, in filename order, that isn't already recorded in
 // schema_migrations. Safe to run repeatedly.
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgresql://unihack:unihack_local_password@127.0.0.1:5433/unihack_ledger' });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgresql://unihack:unihack_local_password@127.0.0.1:5432/unihack_ledger' });
 const migrationsDir = path.join(__dirname, 'migrations');
 
 async function main() {

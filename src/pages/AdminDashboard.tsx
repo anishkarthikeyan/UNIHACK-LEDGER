@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, FileCheck, Shield, AlertTriangle, TrendingUp, Award, Activity, UserPlus, FileText, Loader2 } from 'lucide-react';
+import { Users, FileCheck, Shield, AlertTriangle, TrendingUp, Award, Activity, UserPlus, FileText, Loader2, Trophy, ClipboardList, UsersRound } from 'lucide-react';
 import { api } from '../lib/api';
 import type { AdminDashboardSummary } from '../types';
 import type { NavigateFn } from '../App';
@@ -45,6 +45,9 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           { label: 'Total Participations', value: summary?.totalParticipations ?? 0, icon: TrendingUp, highlight: false },
           { label: 'Total Wins', value: summary?.totalWins ?? 0, icon: Award, highlight: false },
           { label: 'Flagged Actions', value: summary?.flaggedActions ?? 0, icon: AlertTriangle, highlight: (summary?.flaggedActions ?? 0) > 0 },
+          { label: 'Total Competitions', value: summary?.totalHackathons ?? 0, icon: Trophy, highlight: false },
+          { label: 'Total Registrations', value: summary?.totalRegistrations ?? 0, icon: ClipboardList, highlight: false },
+          { label: 'Total Teams', value: summary?.totalTeams ?? 0, icon: UsersRound, highlight: false },
         ].map((stat) => (
           <div key={stat.label} className={`${stat.highlight ? 'bg-yellow-400 text-white border-yellow-400' : 'bg-black text-white border-neutral-800'} p-5 rounded-3xl border-2 shadow-lg flex items-center gap-4`}>
             <div className={`p-3 rounded-2xl ${stat.highlight ? 'bg-neutral-900 text-yellow-400' : 'bg-neutral-800 text-white'}`}>

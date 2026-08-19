@@ -100,7 +100,7 @@ export default function StudentCalendar() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Calendar</h1>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Calendar</h1>
         <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Deadlines, reminders, and team syncs</p>
       </div>
 

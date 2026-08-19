@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  Trophy, 
-  Users, 
-  Briefcase, 
-  CheckSquare, 
-  Calendar, 
-  Bell, 
-  FileText, 
+import React, { useEffect, useState } from 'react';
+import {
+  LayoutDashboard,
+  Trophy,
+  Users,
+  Briefcase,
+  CheckSquare,
+  Calendar,
+  Bell,
+  FileText,
   Settings,
   Search,
   Menu,
@@ -18,14 +18,18 @@ import {
   Award,
   LogOut,
   PlusCircle,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
+import type { Hackathon } from '../types';
+import type { NavigateFn } from '../App';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
-  setActiveTab: (tab: string) => void;
+  setActiveTab: NavigateFn;
   role: 'student' | 'faculty' | 'admin';
   onLogout: () => void;
 }
@@ -35,13 +39,60 @@ function initialsOf(name: string) {
   return (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '');
 }
 
+// The two competition-management roles use slightly different tab ids for the hackathon
+// detail screen (a pre-existing naming quirk in App.tsx's router) — resolve it once here
+// rather than duplicating the branch everywhere a search result is opened.
+function hackathonDetailTab(role: 'student' | 'faculty' | 'admin') {
+  return role === 'student' ? 'hackathon-detail' : 'hackathons-detail';
+}
+
 export default function Layout({ children, activeTab, setActiveTab, role, onLogout }: LayoutProps) {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Hackathon[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const displayName = user?.full_name ?? 'Guest';
   const initials = (initialsOf(displayName) || 'U').toUpperCase();
+
+  // Poll unread notifications so the bell badge reflects reality instead of always being lit.
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      api.notifications.list()
+        .then((rows) => { if (!cancelled) setUnreadCount(rows.filter((n) => !n.read_at).length); })
+        .catch(() => { /* non-critical for the badge */ });
+    };
+    load();
+    const interval = setInterval(load, 45000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [activeTab === 'notifications']);
+
+  // Debounced live search across hackathons (the one entity every role can see and act on).
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) { setSearchResults([]); setSearchLoading(false); return; }
+    setSearchLoading(true);
+    const handle = setTimeout(() => {
+      api.hackathons.list(query)
+        .then((rows) => setSearchResults(rows.slice(0, 8)))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
+
+  const openSearchResult = (h: Hackathon) => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowResults(false);
+    setSearchOpen(false);
+    setActiveTab(hackathonDetailTab(role), h.id);
+  };
 
   const getNavItems = () => {
     if (role === 'student') {
@@ -54,6 +105,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
         { name: 'Notifications', icon: Bell, id: 'notifications' },
         { name: 'Projects', icon: Briefcase, id: 'projects' },
         { name: 'Achievements', icon: Award, id: 'achievements' },
+        { name: 'Showcase', icon: Sparkles, id: 'showcase' },
         { name: 'Suggest Hackathon', icon: PlusCircle, id: 'suggest' },
         { name: 'Profile', icon: UserCircle, id: 'profile' },
       ];
@@ -74,6 +126,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
     }
     return [
       { name: 'Dashboard', icon: LayoutDashboard, id: 'dashboard' },
+      { name: 'Competitions', icon: Trophy, id: 'hackathons' },
       { name: 'User Management', icon: Users, id: 'users' },
       { name: 'Audit Logs', icon: FileText, id: 'audit' },
       { name: 'System Settings', icon: Settings, id: 'settings' },
@@ -137,7 +190,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
       <div 
         className={`fixed top-0 bottom-0 left-0 w-80 max-w-[85vw] bg-neutral-900 z-50 flex flex-col border-r border-neutral-800 transition-transform duration-300 ease-in-out md:hidden ${
           mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
-        } pt-safe pb-safe`}
+        } pt-safe pb-safe pl-safe`}
       >
         <div className="p-5 flex items-center justify-between border-b border-neutral-800">
           <div className="flex items-center gap-2">
@@ -256,22 +309,16 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
       </aside>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-        {/* Top App Header */}
-        <header className="h-16 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-4 md:px-6 shrink-0 pt-safe z-30">
+      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative pl-safe pr-safe">
+        {/* Top App Header — taller and roomier on mobile only (h-20, vs. the unchanged h-16 desktop
+            height at md:); the hamburger drawer toggle that used to live here is gone (see Layout
+            navigation refinement) — the bottom nav's MORE tab is now the single entry point for
+            secondary navigation, opening this exact same mobileDrawerOpen drawer. */}
+        <header className="h-20 md:h-16 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-4 md:px-6 shrink-0 pt-safe z-30">
           <div className="flex items-center gap-3 flex-1 min-w-0 max-w-xl">
-            {/* Mobile Drawer Toggle */}
-            <button 
-              onClick={() => setMobileDrawerOpen(true)}
-              className="p-2 text-neutral-300 hover:text-white bg-neutral-800 rounded-xl md:hidden shrink-0"
-              aria-label="Open menu"
-            >
-              <Menu size={20} />
-            </button>
-
             {/* Mobile Title Logo */}
             <div className="md:hidden flex items-center gap-1.5 shrink-0">
-              <span className="font-black text-sm uppercase tracking-tighter text-white">
+              <span className="font-black text-xl uppercase tracking-tighter text-white whitespace-nowrap">
                 UniHack<span className="text-yellow-400">.</span>
               </span>
             </div>
@@ -279,37 +326,67 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
             {/* Search Input (Desktop & Tablet) */}
             <div className="relative w-full max-w-md hidden sm:block">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
-              <input 
-                type="text" 
-                placeholder="Search hackathons, teams, projects..." 
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true); }}
+                onFocus={() => setShowResults(true)}
+                onBlur={() => setTimeout(() => setShowResults(false), 150)}
+                placeholder="Search hackathons..."
                 className="w-full pl-10 pr-4 py-2 bg-neutral-950 border border-neutral-800 rounded-full focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 text-xs outline-none transition-all text-white placeholder-neutral-500"
               />
+              {showResults && searchQuery.trim().length >= 2 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-900 border-2 border-neutral-800 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto">
+                  {searchLoading ? (
+                    <div className="p-4 flex items-center justify-center text-neutral-500"><Loader2 size={16} className="animate-spin" /></div>
+                  ) : searchResults.length === 0 ? (
+                    <p className="p-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500 text-center">No hackathons match "{searchQuery}"</p>
+                  ) : (
+                    searchResults.map((h) => (
+                      <button
+                        key={h.id}
+                        onClick={() => openSearchResult(h)}
+                        className="w-full text-left px-4 py-3 hover:bg-neutral-800 transition-colors border-b border-neutral-800 last:border-0"
+                      >
+                        <p className="text-xs font-bold text-white truncate">{h.title}</p>
+                        <p className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest mt-0.5">{h.organizer}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
           
-          <div className="flex items-center space-x-2.5 sm:space-x-4 shrink-0">
+          <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
             {/* Mobile Search Button */}
-            <button 
-              onClick={() => setSearchOpen(!searchOpen)} 
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
               className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-full sm:hidden"
             >
-              <Search size={20} />
+              <Search size={22} />
             </button>
 
-            {/* Notifications Button */}
-            <button 
+            {/* Notifications Button — this single element is shared by mobile and desktop (there
+                is no separate desktop bell), so the size bump is applied responsively: larger by
+                default (mobile), reverting to the original 20px at md: so the desktop header is
+                visually unchanged. */}
+            <button
               onClick={() => setActiveTab('notifications')}
               className="p-2.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-full relative transition-colors"
             >
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-yellow-400 rounded-full ring-2 ring-neutral-900"></span>
+              <Bell className="w-[22px] h-[22px] md:w-5 md:h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-yellow-400 rounded-full ring-2 ring-neutral-900"></span>
+              )}
             </button>
 
-            {/* User Profile */}
+            {/* User Profile — same reasoning as the bell: one shared avatar button, sized up on
+                mobile only, back to its original 36px at md: for an unchanged desktop header. */}
             <div className="flex items-center gap-2.5 pl-2 sm:pl-4 border-l border-neutral-800">
-              <button 
+              <button
                 onClick={() => setActiveTab('profile')}
-                className="w-9 h-9 bg-yellow-400 text-black font-black rounded-full flex items-center justify-center text-xs shadow-md ring-2 ring-yellow-400/30 hover:scale-105 transition-transform"
+                className="w-10 h-10 md:w-9 md:h-9 bg-yellow-400 text-black font-black rounded-full flex items-center justify-center text-sm md:text-xs shadow-md ring-2 ring-yellow-400/30 hover:scale-105 transition-transform shrink-0"
               >
                 {initials}
               </button>
@@ -330,32 +407,57 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
           <div className="sm:hidden p-3 bg-neutral-900 border-b border-neutral-800 animate-in slide-in-from-top-2 duration-200">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
-              <input 
-                type="text" 
-                placeholder="Search..." 
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search hackathons..."
                 autoFocus
                 className="w-full pl-10 pr-10 py-2.5 bg-neutral-950 border border-yellow-400/50 rounded-xl text-xs outline-none text-white placeholder-neutral-500"
               />
-              <button 
-                onClick={() => setSearchOpen(false)}
+              <button
+                onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400"
               >
                 <X size={16} />
               </button>
             </div>
+            {searchQuery.trim().length >= 2 && (
+              <div className="mt-2 bg-neutral-950 border-2 border-neutral-800 rounded-2xl overflow-hidden max-h-64 overflow-y-auto">
+                {searchLoading ? (
+                  <div className="p-4 flex items-center justify-center text-neutral-500"><Loader2 size={16} className="animate-spin" /></div>
+                ) : searchResults.length === 0 ? (
+                  <p className="p-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500 text-center">No hackathons match "{searchQuery}"</p>
+                ) : (
+                  searchResults.map((h) => (
+                    <button
+                      key={h.id}
+                      onClick={() => openSearchResult(h)}
+                      className="w-full text-left px-4 py-3 hover:bg-neutral-800 transition-colors border-b border-neutral-800 last:border-0"
+                    >
+                      <p className="text-xs font-bold text-white truncate">{h.title}</p>
+                      <p className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest mt-0.5">{h.organizer}</p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Page Content Viewport */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-neutral-950 pb-20 md:pb-8">
-          <div className="max-w-7xl mx-auto w-full">
+        {/* Page Content Viewport — the app's one legitimate scroll region. overflow-x-hidden
+            here (not just on html/body) is the actual containment boundary: it clips a
+            misbehaving descendant instead of letting it widen this container and create
+            page-level horizontal scroll. */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 bg-neutral-950 pb-20 md:pb-8">
+          <div className="max-w-7xl mx-auto w-full min-w-0">
             {children}
           </div>
         </div>
 
         {/* Bottom Mobile Navigation Bar (for Mobile Android experience) */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-neutral-900/95 backdrop-blur-lg border-t border-neutral-800 px-2 py-1.5 pb-safe">
-          <div className="flex justify-around items-center">
+        <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-neutral-900/95 backdrop-blur-lg border-t border-neutral-800 px-2 py-1.5 pb-safe pl-safe pr-safe">
+          <div className="flex justify-around items-center min-w-0">
             {bottomNavItems.map((item) => {
               const isActive = activeTab === item.id;
               return (

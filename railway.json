@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "echo 'No separate build step — the server runs TypeScript directly via tsx (see start command); this repo also has an unrelated frontend `build` script (vite build) that Nixpacks would otherwise auto-run here by default, which this explicit no-op avoids.'"
+  },
+  "deploy": {
+    "startCommand": "npm run start",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5
+  }
+}

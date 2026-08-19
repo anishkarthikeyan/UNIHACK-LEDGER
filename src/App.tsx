@@ -4,7 +4,9 @@ import Dashboard from './pages/Dashboard';
 import ManageHackathons from './pages/ManageHackathons';
 import AddHackathon from './pages/AddHackathon';
 import HackathonDetail from './pages/HackathonDetail';
+import HackathonEditForm from './pages/HackathonEditForm';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import StudentDashboard from './pages/StudentDashboard';
 import ExploreHackathons from './pages/ExploreHackathons';
 import StudentPipeline from './pages/StudentPipeline';
@@ -45,11 +47,32 @@ export default function App() {
   const { user, loading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  // Read once at mount — a password-reset link is a one-time entry point into the app, not a
+  // persistent client-side route, so there's no need to keep re-parsing location.search on every
+  // render. Cleared from the URL once the reset flow finishes (see the ResetPassword branch below).
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('reset_token'));
+  const [resetTokenConsumed, setResetTokenConsumed] = useState(false);
 
   const onNavigate: NavigateFn = (route, id) => {
     setActiveTab(route);
     setSelectedId(id);
   };
+
+  // Checked ahead of the loading/auth gate below: a reset link must work whether or not the
+  // visitor happens to have a session in this browser (e.g. a shared/kiosk machine, or simply
+  // signed out), and it must not silently dead-end into the normal dashboard for someone who is
+  // signed in.
+  if (resetToken && !resetTokenConsumed) {
+    return (
+      <ResetPassword
+        token={resetToken}
+        onDone={() => {
+          setResetTokenConsumed(true);
+          window.history.replaceState(null, '', window.location.pathname);
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -171,6 +194,8 @@ export default function App() {
                 <HackathonDetail hackathonId={selectedId} onNavigate={onNavigate} />
               </div>
             );
+        case 'hackathons-edit':
+            return <HackathonEditForm hackathonId={selectedId} onNavigate={onNavigate} />;
         default:
           return (
             <div className="flex flex-col items-center justify-center h-full text-neutral-500 pt-20">
@@ -194,12 +219,52 @@ if (role === 'admin') {
           return <AdminSystemSettings />;
         case 'profile':
           return <AdminProfileSettings />;
+        case 'hackathons':
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-4 mb-4">
+                <button
+                  onClick={() => onNavigate('hackathons-add')}
+                  className="px-6 py-3 bg-yellow-400 text-white font-bold uppercase tracking-widest text-[10px] rounded-full hover:scale-95 transition-transform shadow-lg"
+                >
+                  + Add Hackathon
+                </button>
+              </div>
+              <ManageHackathons onNavigate={onNavigate} />
+            </div>
+          );
+        case 'hackathons-add':
+            return (
+              <div className="space-y-4">
+                <button
+                  onClick={() => onNavigate('hackathons')}
+                  className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-4 flex items-center gap-2 transition-colors"
+                >
+                  &larr; Back to Manage
+                </button>
+                <AddHackathon onNavigate={onNavigate} />
+              </div>
+            );
+        case 'hackathons-detail':
+            return (
+              <div className="space-y-4">
+                <button
+                  onClick={() => onNavigate('hackathons')}
+                  className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-4 flex items-center gap-2 transition-colors"
+                >
+                  &larr; Back to Manage
+                </button>
+                <HackathonDetail hackathonId={selectedId} onNavigate={onNavigate} />
+              </div>
+            );
+        case 'hackathons-edit':
+            return <HackathonEditForm hackathonId={selectedId} onNavigate={onNavigate} />;
         default:
           return (
             <div className="flex flex-col items-center justify-center h-full text-neutral-500 pt-20">
               <div className="text-4xl mb-4 grayscale">🛡️</div>
               <p className="text-lg font-black uppercase tracking-widest text-white">Admin Portal</p>
-              <p className="text-[10px] uppercase font-bold tracking-widest mt-2">MVP Screens not implemented yet</p>
+              <p className="text-[10px] uppercase font-bold tracking-widest mt-2">Select 'Dashboard' or 'Competitions'</p>
             </div>
           );
       }

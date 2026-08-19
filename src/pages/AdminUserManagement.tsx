@@ -40,6 +40,33 @@ export default function AdminUserManagement() {
     }
   };
 
+  const changeRole = async (u: AdminUser, role: 'student' | 'faculty' | 'admin') => {
+    if (role === u.role) return;
+    setBusyId(u.id);
+    setError(null);
+    try {
+      await api.admin.updateUser(u.id, { role });
+      load();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Backend is gating this as a privilege escalation (see Admin > System Settings >
+        // "Require confirmation for role escalation"). Ask once, then retry with confirmed: true.
+        if (window.confirm(`${err.message}\n\nProceed?`)) {
+          try {
+            await api.admin.updateUser(u.id, { role, confirmed: true });
+            load();
+          } catch (err2) {
+            setError(err2 instanceof ApiError ? err2.message : 'Failed to update role.');
+          }
+        }
+      } else {
+        setError(err instanceof ApiError ? err.message : 'Failed to update role.');
+      }
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const createUser = async () => {
     if (!newUser.institutionalId || !newUser.email || !newUser.fullName) { setError('Institutional ID, email, and name are required.'); return; }
     setSubmitting(true);
@@ -115,13 +142,20 @@ export default function AdminUserManagement() {
                       <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{user.institutional_id} • {user.email}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                        user.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                        user.role === 'faculty' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                        'bg-yellow-400/20 text-yellow-500 border border-yellow-400/20'
-                      }`}>
-                        {user.role}
-                      </span>
+                      <select
+                        value={user.role}
+                        disabled={busyId === user.id}
+                        onChange={(e) => changeRole(user, e.target.value as 'student' | 'faculty' | 'admin')}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed appearance-none border ${
+                          user.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                          user.role === 'faculty' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                          'bg-yellow-400/20 text-yellow-500 border-yellow-400/20'
+                        }`}
+                      >
+                        <option value="student">student</option>
+                        <option value="faculty">faculty</option>
+                        <option value="admin">admin</option>
+                      </select>
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-bold text-white">{user.department_code ?? '—'}</p>

@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { api, getToken, setToken, setUnauthorizedHandler } from '../lib/api';
+import { registerForPushNotifications, unregisterPushToken } from '../lib/push';
 import type { AuthUser } from '../types';
 
 interface AuthContextValue {
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    unregisterPushToken();
   }, []);
 
   const refresh = useCallback(async () => {
@@ -37,6 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       finally { setLoading(false); }
     })();
   }, [refresh]);
+
+  // Registers this device for push once there's an authenticated session to attach the token
+  // to — a no-op on web, and harmless if it's still pending Firebase credentials (see
+  // src/lib/push.ts).
+  useEffect(() => { if (user) registerForPushNotifications(); }, [user]);
 
   const login = useCallback(async (email: string, password: string) => {
     setError(null);

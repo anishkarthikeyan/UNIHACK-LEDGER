@@ -1,8 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, Star, Target, CheckCircle2, Medal, Upload, X, Loader2 } from 'lucide-react';
+import { Trophy, Star, Target, CheckCircle2, Medal, Upload, X, Loader2, Paperclip, Eye, AlertTriangle } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import type { Achievement } from '../types';
+
+// Opens a downloaded certificate blob in a new tab (images/PDFs preview inline there; anything
+// else the browser can't render triggers its native download prompt). blob: URLs are revoked
+// after a short delay — long enough for the new tab to load the resource, short enough not to
+// leak memory for a page that stays open a while.
+async function openCertificate(id: string, setError: (msg: string) => void) {
+  try {
+    const { blob } = await api.achievements.certificate(id);
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (err) {
+    setError(err instanceof ApiError ? err.message : 'Failed to open certificate.');
+  }
+}
 
 function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -18,7 +33,9 @@ export default function StudentAchievements() {
   const [title, setTitle] = useState('');
   const [outcome, setOutcome] = useState('Participant');
   const [achievedOn, setAchievedOn] = useState('');
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingCertFor, setUploadingCertFor] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -35,8 +52,12 @@ export default function StudentAchievements() {
     setSubmitting(true);
     setError(null);
     try {
-      await api.achievements.create({ title: title.trim(), outcome, achievedOn: achievedOn || undefined });
-      setTitle(''); setOutcome('Participant'); setAchievedOn('');
+      const created = await api.achievements.create({ title: title.trim(), outcome, achievedOn: achievedOn || undefined });
+      if (certificateFile) {
+        try { await api.achievements.uploadCertificate(created.id, certificateFile); }
+        catch (err) { setError(err instanceof ApiError ? `Record saved, but the certificate failed to upload: ${err.message}` : 'Record saved, but the certificate failed to upload.'); }
+      }
+      setTitle(''); setOutcome('Participant'); setAchievedOn(''); setCertificateFile(null);
       setShowUploadModal(false);
       load();
     } catch (err) {
@@ -44,6 +65,14 @@ export default function StudentAchievements() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const uploadCertificateFor = async (achievement: Achievement, file: File) => {
+    setUploadingCertFor(achievement.id);
+    setError(null);
+    try { await api.achievements.uploadCertificate(achievement.id, file); load(); }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'Failed to upload certificate.'); }
+    finally { setUploadingCertFor(null); }
   };
 
   const wins = achievements.filter((a) => /winner|1st|2nd|3rd|runner/i.test(a.outcome)).length;
@@ -58,7 +87,7 @@ export default function StudentAchievements() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Achievements</h1>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Achievements</h1>
         <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Your hackathon portfolio and verified records</p>
       </div>
 
@@ -145,6 +174,7 @@ export default function StudentAchievements() {
                     <th className="px-6 py-4 border-b border-neutral-800">Event Name</th>
                     <th className="px-6 py-4 border-b border-neutral-800">Date</th>
                     <th className="px-6 py-4 border-b border-neutral-800">Outcome</th>
+                    <th className="px-6 py-4 border-b border-neutral-800">Certificate</th>
                     <th className="px-6 py-4 border-b border-neutral-800">Verification</th>
                   </tr>
                 </thead>
@@ -161,12 +191,30 @@ export default function StudentAchievements() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
+                        {record.has_certificate ? (
+                          <button onClick={() => openCertificate(record.id, setError)} className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-yellow-400 hover:underline">
+                            <Eye size={12} /> View
+                          </button>
+                        ) : (
+                          <label className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-white cursor-pointer">
+                            {uploadingCertFor === record.id ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />} Attach
+                            <input type="file" accept="application/pdf,image/png,image/jpeg,image/webp,.docx,.doc,.pptx,.ppt,.zip" className="hidden"
+                              disabled={uploadingCertFor === record.id}
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadCertificateFor(record, f); e.target.value = ''; }} />
+                          </label>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
                         {record.status === 'approved' ? (
                           <div className="flex items-center gap-2 text-green-500 text-[10px] font-bold uppercase tracking-widest">
                             <CheckCircle2 size={14} /> Verified
                           </div>
                         ) : record.status === 'rejected' ? (
-                          <span className="text-red-400 text-[10px] font-bold uppercase tracking-widest">Rejected</span>
+                          <span className="text-red-400 text-[10px] font-bold uppercase tracking-widest" title={record.review_notes ?? undefined}>Rejected{record.review_notes ? ` — ${record.review_notes}` : ''}</span>
+                        ) : record.status === 'changes_requested' ? (
+                          <span className="inline-flex items-center gap-1 text-amber-400 text-[10px] font-bold uppercase tracking-widest">
+                            <AlertTriangle size={12} /> Changes requested{record.review_notes ? `: ${record.review_notes}` : ''}
+                          </span>
                         ) : (
                           <span className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest">Pending</span>
                         )}
@@ -213,6 +261,16 @@ export default function StudentAchievements() {
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Date Achieved</label>
                 <input value={achievedOn} onChange={(e) => setAchievedOn(e.target.value)} type="date" className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold transition-colors" />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Certificate (optional, can attach later)</label>
+                <label className="w-full flex items-center gap-2 p-4 bg-neutral-900 border-2 border-dashed border-neutral-800 rounded-xl text-neutral-400 text-xs font-bold cursor-pointer hover:border-yellow-400 transition-colors">
+                  <Paperclip size={14} />
+                  <span className="truncate">{certificateFile ? certificateFile.name : 'PDF, image, DOCX, PPT, or ZIP — up to 20MB'}</span>
+                  <input type="file" accept="application/pdf,image/png,image/jpeg,image/webp,.docx,.doc,.pptx,.ppt,.zip" className="hidden"
+                    onChange={(e) => setCertificateFile(e.target.files?.[0] ?? null)} />
+                </label>
               </div>
 
               <button onClick={submit} disabled={submitting} className="w-full py-4 mt-4 bg-yellow-400 text-white rounded-full font-black uppercase tracking-widest text-xs hover:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">

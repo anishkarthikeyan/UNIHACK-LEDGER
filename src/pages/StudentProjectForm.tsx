@@ -41,7 +41,11 @@ export default function StudentProjectForm({ onNavigate }: StudentProjectFormPro
   };
   const completePct = Math.round((Object.values(complete).filter(Boolean).length / Object.keys(complete).length) * 100);
 
-  const submit = async () => {
+  // Takes the target visibility as a parameter rather than reading the `visibility` state,
+  // because the Save Draft / Submit for Review buttons below call setVisibility(...) and this
+  // function in the same click handler — React state updates aren't synchronous, so reading
+  // `visibility` here would still see the value from the previous render, not the one just set.
+  const submit = async (targetVisibility: 'private' | 'institution' | 'public') => {
     if (!title.trim() || problemStatement.trim().length < 10 || description.trim().length < 10) {
       setError('Title, problem statement (min 10 chars), and description (min 10 chars) are required.');
       return;
@@ -52,6 +56,7 @@ export default function StudentProjectForm({ onNavigate }: StudentProjectFormPro
     }
     setSubmitting(true);
     setError(null);
+    setVisibility(targetVisibility);
     try {
       await api.projects.create({
         title: title.trim(),
@@ -65,7 +70,7 @@ export default function StudentProjectForm({ onNavigate }: StudentProjectFormPro
         demoUrl: demoUrl || undefined,
         posterUrl: posterUrl || undefined,
         presentationUrl: presentationUrl || undefined,
-        visibility,
+        visibility: targetVisibility,
       });
       onNavigate?.('projects');
     } catch (err) {
@@ -82,14 +87,14 @@ export default function StudentProjectForm({ onNavigate }: StudentProjectFormPro
           <button onClick={() => onNavigate?.('projects')} className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-yellow-400 mb-2 flex items-center gap-1 transition-colors">
             <ChevronLeft size={14} /> Back to Repository
           </button>
-          <h1 className="text-3xl font-black tracking-tighter uppercase text-white">Add Project Record</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase text-white break-words">Add Project Record</h1>
           <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Document your hackathon submission</p>
         </div>
         <div className="flex gap-4">
-          <button onClick={() => { setVisibility('private'); submit(); }} disabled={submitting} className="px-6 py-4 bg-black border-2 border-neutral-800 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:border-yellow-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+          <button onClick={() => submit('private')} disabled={submitting} className="px-6 py-4 bg-black border-2 border-neutral-800 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:border-yellow-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
             <Save size={16} /> Save Draft
           </button>
-          <button onClick={() => { setVisibility('public'); submit(); }} disabled={submitting} className="px-6 py-4 bg-yellow-400 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform flex items-center justify-center gap-2 shadow-lg disabled:opacity-60">
+          <button onClick={() => submit('public')} disabled={submitting} className="px-6 py-4 bg-yellow-400 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform flex items-center justify-center gap-2 shadow-lg disabled:opacity-60">
             {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />} Submit for Review
           </button>
         </div>
