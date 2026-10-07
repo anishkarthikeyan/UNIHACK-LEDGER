@@ -4,7 +4,8 @@
 
 export type NotificationType =
   | 'interest' | 'team_invite' | 'team_join_request' | 'verification' | 'update'
-  | 'registration_submitted' | 'registration_reviewed' | 'achievement_reviewed' | 'project_reviewed' | 'suggestion_reviewed' | 'general';
+  | 'registration_submitted' | 'registration_reviewed' | 'achievement_reviewed' | 'project_reviewed' | 'suggestion_reviewed'
+  | 'suggestion_submitted' | 'achievement_submitted' | 'hackathon_added' | 'general';
 
 export interface NotificationPayload {
   recipientId: string;

@@ -1,5 +1,11 @@
 import type {
   Achievement,
+  AdminScopeAssignment,
+  CohortFilters,
+  CohortHackathon,
+  CohortSummary,
+  Role,
+  StudentDetail,
   AdminDashboardSummary,
   AdminUser,
   AuditLog,
@@ -25,6 +31,7 @@ import type {
   Suggestion,
   SuggestionInput,
   SubmitProjectReviewInput,
+  StaffTeam,
   Team,
   TeamDetail,
   TeamInvite,
@@ -145,6 +152,13 @@ async function fetchBlob(path: string): Promise<{ blob: Blob; filename: string |
   return { blob: await res.blob(), filename };
 }
 
+function queryString(params: Record<string, string | number | undefined | null>): string {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== null && value !== '') qs.set(key, String(value));
+  const s = qs.toString();
+  return s ? `?${s}` : '';
+}
+
 function get<T>(path: string) {
   return request<T>(path);
 }
@@ -199,7 +213,7 @@ export const api = {
   teams: {
     mine: () => get<Team[]>('/teams/mine'),
     joinable: () => get<Team[]>('/teams'),
-    all: () => get<Team[]>('/teams/all'),
+    all: () => get<StaffTeam[]>('/teams/all'),
     get: (id: string) => get<TeamDetail>(`/teams/${id}`),
     create: (input: CreateTeamInput) => post<Team>('/teams', input),
     join: (id: string) => post<void>(`/teams/${id}/join`),
@@ -256,7 +270,12 @@ export const api = {
     remove: (id: string) => del<void>(`/reminders/${id}`),
   },
   students: {
-    list: (search?: string) => get<Student[]>(`/students${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+    list: (search?: string, filters: CohortFilters = {}) => get<Student[]>(`/students${queryString({ search, ...filters })}`),
+    get: (id: string) => get<StudentDetail>(`/students/${id}`),
+  },
+  cohort: {
+    summary: (filters: CohortFilters = {}) => get<CohortSummary>(`/cohort/summary${queryString({ ...filters })}`),
+    hackathons: (filters: CohortFilters = {}) => get<CohortHackathon[]>(`/cohort/hackathons${queryString({ ...filters })}`),
   },
   reports: {
     summary: () => get<ReportSummary>('/reports/summary'),
@@ -270,13 +289,16 @@ export const api = {
       const query = qs.toString();
       return get<AdminUser[]>(`/admin/users${query ? `?${query}` : ''}`);
     },
-    createUser: (input: { institutionalId: string; email: string; fullName: string; role: 'student' | 'faculty' | 'admin'; departmentCode?: string }) => post<AdminUser>('/admin/users', input),
-    updateUser: (id: string, input: { fullName?: string; status?: 'active' | 'inactive' | 'suspended'; role?: 'student' | 'faculty' | 'admin'; confirmed?: boolean }) => patch<AdminUser>(`/admin/users/${id}`, input),
+    createUser: (input: { institutionalId: string; email: string; fullName: string; role: Role; departmentCode?: string }) => post<AdminUser>('/admin/users', input),
+    updateUser: (id: string, input: { fullName?: string; status?: 'active' | 'inactive' | 'suspended'; role?: Role; confirmed?: boolean }) => patch<AdminUser>(`/admin/users/${id}`, input),
     auditLogs: (search?: string) => get<AuditLog[]>(`/admin/audit-logs${search ? `?search=${encodeURIComponent(search)}` : ''}`),
     departments: () => get<Department[]>('/admin/departments'),
     createDepartment: (code: string, name: string) => post<Department>('/admin/departments', { code, name }),
     updateDepartment: (id: string, input: { code?: string; name?: string }) => patch<Department>(`/admin/departments/${id}`, input),
     deleteDepartment: (id: string) => del<void>(`/admin/departments/${id}`),
+    scopeAssignments: (userId?: string) => get<AdminScopeAssignment[]>(`/admin/scope-assignments${queryString({ userId })}`),
+    createScopeAssignment: (input: { userId: string; departmentCode: string; batchYear?: number | null; section?: string | null }) => post<AdminScopeAssignment>('/admin/scope-assignments', input),
+    deleteScopeAssignment: (id: string) => del<void>(`/admin/scope-assignments/${id}`),
     settings: () => get<Record<string, unknown>>('/admin/settings'),
     updateSettings: (settings: Record<string, unknown>) => put<Record<string, unknown>>('/admin/settings', settings),
   },

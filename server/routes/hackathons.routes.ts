@@ -5,6 +5,7 @@ import { audit } from '../lib/audit';
 import { slugify } from '../lib/slugify';
 import { ah } from '../middleware/asyncHandler';
 import { allow, authenticate, AuthRequest } from '../middleware/auth';
+import { registrationOwnerSql, studentIdInScopeSql } from '../lib/scope';
 import { services } from '../services';
 
 // Behavior unchanged from the original monolithic server/index.ts — moved verbatim into its own
@@ -272,10 +273,11 @@ hackathonsRoutes.put('/hackathons/:id/eligibility', authenticate, allow('faculty
   } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
 }));
 
-hackathonsRoutes.get('/hackathons/:id/registrations', authenticate, allow('faculty', 'admin'), ah(async (req, res) => {
+hackathonsRoutes.get('/hackathons/:id/registrations', authenticate, allow('faculty', 'admin'), ah(async (req: AuthRequest, res) => {
   const { rows } = await pool.query(`SELECT r.*, s.full_name AS student_name, s.email AS student_email, t.name AS team_name
     FROM registrations r LEFT JOIN users s ON s.id = r.student_id LEFT JOIN teams t ON t.id = r.team_id
-    WHERE r.hackathon_id = $1 ORDER BY r.created_at DESC`, [req.params.id]);
+    WHERE r.hackathon_id = $1 AND ${studentIdInScopeSql(req.user!.role, '$2', registrationOwnerSql('r'))}
+    ORDER BY r.created_at DESC`, [req.params.id, req.user!.id]);
   res.json(rows);
 }));
 

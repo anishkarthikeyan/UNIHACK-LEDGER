@@ -123,10 +123,11 @@ export default function FacultyReviewVerify() {
                           <div>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Suggested By</p>
                             <p className="text-sm font-bold text-white">{s.submitted_by_name}</p>
+                            {s.submitted_by_reg_no && <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">{s.submitted_by_reg_no}{s.submitted_by_section ? ` · Section ${s.submitted_by_section}` : ''}</p>}
                           </div>
                           <div>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Dates</p>
-                            <p className="text-sm font-bold text-white">{s.event_date_text ?? '—'}</p>
+                            <p className="text-sm font-bold text-white">{s.event_date_text ?? (s.registration_deadline ? `Reg. closes ${s.registration_deadline.slice(0, 10)}` : '—')}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Domain</p>
@@ -140,7 +141,7 @@ export default function FacultyReviewVerify() {
 
                         <div className="flex gap-3 pt-4 border-t border-neutral-800">
                           <button disabled={busyId === s.id} onClick={() => reviewSuggestion(s, 'approved')} className="flex-1 py-3 bg-yellow-400 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
-                            <Check size={14} /> Approve
+                            <Check size={14} /> Approve &amp; publish
                           </button>
                           <button disabled={busyId === s.id} onClick={() => reviewSuggestion(s, 'rejected')} className="flex-1 py-3 bg-neutral-800 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-neutral-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                             <X size={14} /> Reject
@@ -216,7 +217,9 @@ export default function FacultyReviewVerify() {
                             <div>
                               <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-500">{a.outcome}</span>
                               <h3 className="text-lg font-black text-white">{a.title}</h3>
-                              <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">{a.student_name}</p>
+                              <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">
+                                {a.student_name}{a.student_reg_no ? ` · ${a.student_reg_no}` : ''}{a.student_section ? ` · Section ${a.student_section}` : ''}{a.team_name ? ` · Team ${a.team_name}` : ''}
+                              </p>
                             </div>
                           </div>
                           <div className="flex gap-2 w-full md:w-auto">

@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { pool } from '../db/pool';
 import { audit } from '../lib/audit';
 import { ah } from '../middleware/asyncHandler';
-import { allow, authenticate, AuthRequest } from '../middleware/auth';
+import { allow, authenticate, AuthRequest, STUDENT_DATA_ROLES } from '../middleware/auth';
+import { isUuid } from '../lib/validation';
+import { studentIdInScopeSql, teamInScopeSql } from '../lib/scope';
 import { services } from '../services';
 
 // Behavior unchanged from the original monolithic server/index.ts, moved verbatim, with the
@@ -28,9 +30,40 @@ teamsRoutes.get('/teams', authenticate, allow('student'), ah(async (req: AuthReq
   res.json(rows);
 }));
 
-teamsRoutes.get('/teams/all', authenticate, allow('faculty', 'admin'), ah(async (_req, res) => {
-  const { rows } = await pool.query(`SELECT t.*, COUNT(tm.user_id) FILTER (WHERE tm.status = 'active')::int AS member_count
-    FROM teams t LEFT JOIN team_members tm ON tm.team_id = t.id GROUP BY t.id ORDER BY t.created_at DESC`);
+// Staff see teams with at least one active member inside their scope — members may come from
+// other sections, and every member is listed (with section and SDE status) so the advisor sees
+// the whole team, with `in_scope` marking their own students. Each team carries the hackathons
+// it registered for and its logged results.
+teamsRoutes.get('/teams/all', authenticate, allow(...STUDENT_DATA_ROLES), ah(async (req: AuthRequest, res) => {
+  const role = req.user!.role;
+  const { rows } = await pool.query(`SELECT t.*,
+      COALESCE(m.member_count, 0) AS member_count, COALESCE(m.members, '[]'::jsonb) AS members, COALESCE(m.sections, '{}') AS sections,
+      COALESCE(r.hackathons, '[]'::jsonb) AS hackathons, COALESCE(a.results, '[]'::jsonb) AS results,
+      COALESCE(a.wins, 0) AS wins
+    FROM teams t
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*) FILTER (WHERE tm.status = 'active')::int AS member_count,
+        array_agg(DISTINCT sp.section) FILTER (WHERE tm.status = 'active' AND sp.section IS NOT NULL) AS sections,
+        jsonb_agg(jsonb_build_object('user_id', u.id, 'full_name', u.full_name, 'institutional_id', u.institutional_id,
+          'section', sp.section, 'sde_status', sp.sde_status, 'member_role', tm.member_role, 'status', tm.status,
+          'in_scope', ${studentIdInScopeSql(role, '$1', 'u.id')})
+          ORDER BY (tm.member_role = 'leader') DESC, u.institutional_id) AS members
+      FROM team_members tm JOIN users u ON u.id = tm.user_id LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE tm.team_id = t.id AND tm.status IN ('active', 'invited')
+    ) m ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(jsonb_build_object('registration_id', reg.id, 'hackathon_id', h.id, 'title', h.title, 'hackathon_status', h.status,
+          'registration_status', reg.status, 'registration_closes_at', h.registration_closes_at) ORDER BY h.registration_closes_at DESC NULLS LAST) AS hackathons
+      FROM registrations reg JOIN hackathons h ON h.id = reg.hackathon_id WHERE reg.team_id = t.id
+    ) r ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(jsonb_build_object('id', ach.id, 'title', ach.title, 'outcome', ach.outcome, 'result', ach.result, 'status', ach.status,
+          'hackathon_id', ach.hackathon_id, 'hackathon_title', h.title, 'achieved_on', ach.achieved_on) ORDER BY ach.achieved_on DESC NULLS LAST) AS results,
+        COUNT(*) FILTER (WHERE ach.status = 'approved' AND ach.result IN ('winner', 'runner_up'))::int AS wins
+      FROM achievements ach LEFT JOIN hackathons h ON h.id = ach.hackathon_id WHERE ach.team_id = t.id
+    ) a ON true
+    WHERE ${teamInScopeSql(role, '$1', 't.id')}
+    ORDER BY a.wins DESC NULLS LAST, t.name`, [req.user!.id]);
   res.json(rows);
 }));
 
@@ -43,8 +76,16 @@ teamsRoutes.get('/teams/invites/mine', authenticate, ah(async (req: AuthRequest,
   res.json(rows);
 }));
 
-teamsRoutes.get('/teams/:id', authenticate, ah(async (req, res) => {
-  const team = (await pool.query('SELECT * FROM teams WHERE id = $1', [req.params.id])).rows[0];
+// Team detail (roster incl. emails): the team's own members/invitees, students browsing a public
+// team, staff whose scope covers an active member, or admin. Anyone else gets 404.
+teamsRoutes.get('/teams/:id', authenticate, ah(async (req: AuthRequest, res) => {
+  if (!isUuid(req.params.id)) return res.status(400).json({ error: 'Invalid id.' });
+  const viewer = req.user!;
+  const team = (await pool.query(`SELECT t.* FROM teams t WHERE t.id = $1 AND (
+      EXISTS (SELECT 1 FROM team_members m WHERE m.team_id = t.id AND m.user_id = $2)
+      OR ($3::text = 'student' AND t.visibility = 'public')
+      OR ${STUDENT_DATA_ROLES.includes(viewer.role) ? teamInScopeSql(viewer.role, '$2', 't.id') : 'FALSE'})`,
+    [req.params.id, viewer.id, viewer.role])).rows[0];
   if (!team) return res.status(404).json({ error: 'Team not found.' });
   const { rows: members } = await pool.query(`SELECT tm.user_id, tm.member_role, tm.status, tm.joined_at, u.full_name, u.email
     FROM team_members tm JOIN users u ON u.id = tm.user_id WHERE tm.team_id = $1 ORDER BY tm.member_role DESC, tm.joined_at ASC`, [req.params.id]);

@@ -1,4 +1,22 @@
-export type Role = 'student' | 'faculty' | 'admin';
+// 'faculty' is the Faculty Advisor role.
+export type Role = 'student' | 'faculty' | 'coordinator' | 'sde_coordinator' | 'hod' | 'admin';
+// Roles that see a scoped cohort of students (see server/lib/scope.ts).
+export type CohortRole = 'faculty' | 'coordinator' | 'sde_coordinator' | 'hod';
+
+export const ROLE_LABEL: Record<Role, string> = {
+  student: 'Student', faculty: 'Faculty Advisor', coordinator: 'Coordinator',
+  sde_coordinator: 'SDE Coordinator', hod: 'HOD', admin: 'Admin',
+};
+
+export interface ScopeAssignment {
+  id: string;
+  department_code: string;
+  department_name?: string;
+  batch_year: number | null;
+  section: string | null;
+}
+
+export type SdeStatus = 'SDE' | 'Non-SDE';
 
 export interface AuthUser {
   id: string;
@@ -13,11 +31,15 @@ export interface AuthUser {
   programme?: string | null;
   year_of_study?: number | null;
   section?: string | null;
+  batch_year?: number | null;
+  sde_status?: SdeStatus | null;
   interests?: string[] | null;
   tech_stack?: string[] | null;
   student_phone?: string | null;
   designation?: string | null;
   faculty_phone?: string | null;
+  // Staff only: the part of Department → Batch → Section they cover.
+  scope?: ScopeAssignment[];
 }
 
 export type HackathonStatus = 'draft' | 'pending_review' | 'published' | 'registration_closed' | 'ongoing' | 'completed' | 'archived';
@@ -181,6 +203,33 @@ export interface Team {
   members?: TeamMember[];
 }
 
+// Staff view of a team (GET /teams/all): full roster with section/SDE, the hackathons it entered
+// and its logged results. Members may come from several sections; `in_scope` marks the viewer's own.
+export interface StaffTeamMember {
+  user_id: string;
+  full_name: string;
+  institutional_id: string;
+  section: string | null;
+  sde_status: SdeStatus | null;
+  member_role: 'leader' | 'member';
+  status: string;
+  in_scope: boolean;
+}
+
+export interface StaffTeam extends Omit<Team, 'members'> {
+  members: StaffTeamMember[];
+  sections: string[];
+  hackathons: { registration_id: string; hackathon_id: string; title: string; hackathon_status: HackathonStatus; registration_status: string; registration_closes_at: string | null }[];
+  results: { id: string; title: string; outcome: string; result: AchievementResult | null; status: string; hackathon_id: string | null; hackathon_title: string | null; achieved_on: string | null }[];
+  wins: number;
+}
+
+export type AchievementResult = 'winner' | 'runner_up' | 'finalist' | 'special_mention' | 'participant';
+
+export const RESULT_LABEL: Record<AchievementResult, string> = {
+  winner: 'Winner', runner_up: 'Runner-up', finalist: 'Finalist', special_mention: 'Special mention', participant: 'Participant',
+};
+
 export interface TeamMember {
   user_id: string;
   member_role: 'leader' | 'member';
@@ -326,6 +375,11 @@ export interface Achievement {
   project_id: string | null;
   project_title?: string | null;
   student_name?: string;
+  student_reg_no?: string;
+  student_section?: string | null;
+  team_id?: string | null;
+  team_name?: string | null;
+  result?: AchievementResult | null;
   title: string;
   outcome: string;
   achieved_on: string | null;
@@ -352,6 +406,8 @@ export interface CreateAchievementInput {
   outcome: string;
   hackathonId?: string;
   projectId?: string;
+  teamId?: string;
+  result?: AchievementResult;
   achievedOn?: string;
 }
 
@@ -393,6 +449,9 @@ export interface Suggestion {
   id: string;
   submitted_by: string;
   submitted_by_name?: string;
+  submitted_by_reg_no?: string;
+  submitted_by_section?: string | null;
+  hackathon_id?: string | null;
   title: string;
   organizer: string;
   official_url: string;
@@ -413,6 +472,10 @@ export interface Student {
   institutional_id: string;
   department_code: string | null;
   year_of_study: number | null;
+  batch_year: number | null;
+  section: string | null;
+  sde_status: SdeStatus | null;
+  participating_count?: number;
   project_count: number;
   hackathon_count: number;
 }
@@ -428,6 +491,9 @@ export interface AdminUser {
   created_at: string;
   department_code: string | null;
   year_of_study: number | null;
+  section: string | null;
+  batch_year: number | null;
+  sde_status: SdeStatus | null;
 }
 
 export interface Department {
@@ -454,6 +520,9 @@ export interface AdminDashboardSummary {
   students: number;
   faculty: number;
   admins: number;
+  coordinators: number;
+  sdeCoordinators: number;
+  hods: number;
   activeHackathons: number;
   totalParticipations: number;
   totalWins: number;
@@ -472,4 +541,55 @@ export interface ReportSummary {
   winRate: number;
   topDomain: string | null;
   domainBreakdown: { domain: string; n: number }[];
+}
+
+export interface CohortFilters {
+  batch?: number;
+  section?: string;
+  sde?: SdeStatus;
+}
+
+export interface CohortSummary {
+  role: Role;
+  sdeOnly: boolean;
+  scope: ScopeAssignment[];
+  totals: { total_students: number; sde: number; non_sde: number; sections: number; participating_students: number; winning_students: number; wins: number; teams: number };
+  sections: { department_code: string; batch_year: number; section: string; total: number; sde: number; non_sde: number }[];
+  participationBySection: { section: string; students: number; participating_students: number; verified_students: number; pending_registrations: number; teams: number; winning_students: number; wins: number }[];
+  participationBySde: { sde_status: SdeStatus; students: number; participating_students: number; verified_students: number; winning_students: number; wins: number }[];
+}
+
+export interface CohortHackathon {
+  hackathon_id: string;
+  title: string;
+  hackathon_status: HackathonStatus;
+  participating_students: number;
+  verified_students: number;
+  pending_registrations: number;
+  teams: number;
+  wins: number;
+  winning_students: number;
+}
+
+export interface StudentDetail {
+  id: string;
+  full_name: string;
+  email: string;
+  institutional_id: string;
+  department_code: string | null;
+  batch_year: number | null;
+  section: string | null;
+  sde_status: SdeStatus | null;
+  year_of_study: number | null;
+  registrations: { id: string; status: string; participation_mode: string; hackathon_id: string; hackathon_title: string; team_name: string | null; rejection_reason: string | null }[];
+  teams: { id: string; name: string; member_role: string; status: string }[];
+  achievements: { id: string; title: string; outcome: string; status: string; achieved_on: string | null }[];
+}
+
+export interface AdminScopeAssignment extends ScopeAssignment {
+  user_id: string;
+  full_name: string;
+  email: string;
+  role: Role;
+  created_at: string;
 }

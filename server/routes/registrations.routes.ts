@@ -4,7 +4,9 @@ import { config } from '../config/env';
 import { pool } from '../db/pool';
 import { audit } from '../lib/audit';
 import { ah } from '../middleware/asyncHandler';
-import { allow, authenticate, AuthRequest } from '../middleware/auth';
+import { allow, authenticate, AuthRequest, REVIEWER_ROLES, STUDENT_DATA_ROLES } from '../middleware/auth';
+import { isUuid } from '../lib/validation';
+import { registrationOwnerSql, studentIdInScopeSql } from '../lib/scope';
 import { services } from '../services';
 import { approvalEmail, registrationEmail } from '../services/email/templates';
 
@@ -99,15 +101,21 @@ registrationsRoutes.post('/registrations', authenticate, allow('student'), ah(as
   res.status(201).json(registration);
 }));
 
-registrationsRoutes.get('/registrations', authenticate, allow('faculty', 'admin'), ah(async (req, res) => {
+// Review queue: only registrations whose owner (solo registrant, or the team's leader) is inside
+// the caller's scope — see server/lib/scope.ts.
+registrationsRoutes.get('/registrations', authenticate, allow(...STUDENT_DATA_ROLES), ah(async (req: AuthRequest, res) => {
   const statusFilter = typeof req.query.status === 'string' ? req.query.status : null;
   const { rows } = await pool.query(`SELECT r.*, h.title AS hackathon_title, s.full_name AS student_name, t.name AS team_name
     FROM registrations r JOIN hackathons h ON h.id = r.hackathon_id LEFT JOIN users s ON s.id = r.student_id LEFT JOIN teams t ON t.id = r.team_id
-    WHERE ($1::text IS NULL OR r.status::text = $1) ORDER BY r.created_at DESC LIMIT 200`, [statusFilter]);
+    WHERE ($1::text IS NULL OR r.status::text = $1) AND ${studentIdInScopeSql(req.user!.role, '$2', registrationOwnerSql('r'))}
+    ORDER BY r.created_at DESC LIMIT 200`, [statusFilter, req.user!.id]);
   res.json(rows);
 }));
 
-registrationsRoutes.patch('/registrations/:id', authenticate, allow('faculty', 'admin'), ah(async (req: AuthRequest, res) => {
+registrationsRoutes.patch('/registrations/:id', authenticate, allow(...REVIEWER_ROLES), ah(async (req: AuthRequest, res) => {
+  if (!isUuid(req.params.id)) return res.status(400).json({ error: 'Invalid id.' });
+  const inScope = (await pool.query(`SELECT 1 FROM registrations r WHERE r.id = $1 AND ${studentIdInScopeSql(req.user!.role, '$2', registrationOwnerSql('r'))}`, [req.params.id, req.user!.id])).rowCount;
+  if (!inScope) return res.status(404).json({ error: 'Registration not found.' });
   const input = z.object({ status: z.enum(['approved', 'rejected']), rejectionReason: z.string().optional() }).safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: input.error.issues });
   const { rows } = await pool.query(`UPDATE registrations SET status = $2, reviewed_by = $3, reviewed_at = now(), rejection_reason = $4 WHERE id = $1 RETURNING *`,

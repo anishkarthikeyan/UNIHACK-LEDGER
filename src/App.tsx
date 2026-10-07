@@ -39,6 +39,8 @@ import AdminUserManagement from './pages/AdminUserManagement';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import AdminSystemSettings from './pages/AdminSystemSettings';
 import AdminProfileSettings from './pages/AdminProfileSettings';
+import AdminScopeAssignments from './pages/AdminScopeAssignments';
+import CohortDashboard from './pages/CohortDashboard';
 import { useAuth } from './context/AuthContext';
 
 export type NavigateFn = (route: string, id?: string) => void;
@@ -165,6 +167,8 @@ export default function App() {
               </div>
             );
 
+        case 'cohort':
+          return <CohortDashboard />;
         case 'participants':
           return <FacultyParticipants />;
         case 'teams':
@@ -207,7 +211,22 @@ export default function App() {
       }
     }
 
-if (role === 'admin') {
+    // Coordinator, SDE Coordinator, HOD: read-only cohort monitoring. What they see is decided
+    // server-side by their scope assignments; these tabs only choose which view to render.
+    if (role === 'coordinator' || role === 'sde_coordinator' || role === 'hod') {
+      switch (activeTab) {
+        case 'teams':
+          return <FacultyTeams />;
+        case 'notifications':
+          return <FacultyNotifications />;
+        case 'settings':
+          return <FacultySettings />;
+        default:
+          return <CohortDashboard />;
+      }
+    }
+
+    if (role === 'admin') {
       switch (activeTab) {
         case 'dashboard':
           return <AdminDashboard onNavigate={onNavigate} />;
@@ -215,6 +234,8 @@ if (role === 'admin') {
           return <AdminUserManagement />;
         case 'audit':
           return <AdminAuditLogs />;
+        case 'scopes':
+          return <AdminScopeAssignments />;
         case 'settings':
           return <AdminSystemSettings />;
         case 'profile':

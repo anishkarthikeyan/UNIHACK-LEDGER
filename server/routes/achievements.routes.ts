@@ -5,8 +5,11 @@ import { config } from '../config/env';
 import { pool } from '../db/pool';
 import { audit } from '../lib/audit';
 import { ah } from '../middleware/asyncHandler';
-import { allow, authenticate, AuthRequest } from '../middleware/auth';
+import { allow, authenticate, AuthRequest, REVIEWER_ROLES, STUDENT_DATA_ROLES } from '../middleware/auth';
+import { isUuid } from '../lib/validation';
+import { canAccessStudent, canAccessTeam, studentIdInScopeSql, teamInScopeSql } from '../lib/scope';
 import { services } from '../services';
+import { notifyStaffCovering } from '../lib/staffNotify';
 import { approvalEmail } from '../services/email/templates';
 import { StorageValidationError } from '../services/storage/StorageService';
 
@@ -31,31 +34,60 @@ const achievementSelectFields = `a.*, f.original_name AS certificate_name, f.con
 const achievementJoins = `LEFT JOIN files f ON f.id = a.certificate_file_id`;
 
 achievementsRoutes.get('/achievements/mine', authenticate, allow('student'), ah(async (req: AuthRequest, res) => {
-  const { rows } = await pool.query(`SELECT ${achievementSelectFields}, h.title AS hackathon_title, p.title AS project_title
-    FROM achievements a LEFT JOIN hackathons h ON h.id = a.hackathon_id LEFT JOIN projects p ON p.id = a.project_id ${achievementJoins}
-    WHERE a.student_id = $1 ORDER BY a.created_at DESC`, [req.user!.id]);
+  const { rows } = await pool.query(`SELECT ${achievementSelectFields}, h.title AS hackathon_title, p.title AS project_title, t.name AS team_name
+    FROM achievements a LEFT JOIN hackathons h ON h.id = a.hackathon_id LEFT JOIN projects p ON p.id = a.project_id LEFT JOIN teams t ON t.id = a.team_id ${achievementJoins}
+    WHERE a.student_id = $1 OR a.team_id IN (SELECT team_id FROM team_members WHERE user_id = $1 AND status = 'active') ORDER BY a.created_at DESC`, [req.user!.id]);
   res.json(rows);
 }));
 
+const RESULTS = ['winner', 'runner_up', 'finalist', 'special_mention', 'participant'] as const;
+const RESULT_LABEL: Record<(typeof RESULTS)[number], string> = {
+  winner: 'Winner', runner_up: 'Runner-up', finalist: 'Finalist', special_mention: 'Special mention', participant: 'Participant',
+};
+
 achievementsRoutes.post('/achievements', authenticate, allow('student'), ah(async (req: AuthRequest, res) => {
-  const input = z.object({ title: z.string().min(2), outcome: z.string().min(2), hackathonId: z.string().uuid().optional(), projectId: z.string().uuid().optional(), achievedOn: z.string().date().optional() }).safeParse(req.body);
+  const input = z.object({ title: z.string().min(2), outcome: z.string().min(2), hackathonId: z.string().uuid().optional(), projectId: z.string().uuid().optional(), teamId: z.string().uuid().optional(), result: z.enum(RESULTS).optional(), achievedOn: z.string().date().optional() }).safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: input.error.issues });
   const x = input.data;
-  const { rows } = await pool.query(`INSERT INTO achievements (student_id, hackathon_id, project_id, title, outcome, achieved_on) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [req.user!.id, x.hackathonId ?? null, x.projectId ?? null, x.title, x.outcome, x.achievedOn ?? null]);
+  // A team achievement credits every active member, so only an active member may log it.
+  let teamMemberIds: string[] = [];
+  if (x.teamId) {
+    teamMemberIds = (await pool.query<{ user_id: string }>(`SELECT user_id FROM team_members WHERE team_id = $1 AND status = 'active'`, [x.teamId])).rows.map((r) => r.user_id);
+    if (!teamMemberIds.includes(req.user!.id)) return res.status(403).json({ error: 'You are not an active member of this team.' });
+  }
+  const { rows } = await pool.query(`INSERT INTO achievements (student_id, hackathon_id, project_id, team_id, result, title, outcome, achieved_on) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    [req.user!.id, x.hackathonId ?? null, x.projectId ?? null, x.teamId ?? null, x.result ?? null, x.title, x.outcome, x.achievedOn ?? null]);
   await audit(req.user!.id, 'create', 'achievement', rows[0].id);
+
+  // Tell the Faculty Advisor(s) of the student's section — and of every team member's section —
+  // plus the HOD, so a win is visible to the people who verify and track it.
+  const student = (await pool.query(`SELECT u.full_name, u.institutional_id, sp.section FROM users u LEFT JOIN student_profiles sp ON sp.user_id = u.id WHERE u.id = $1`, [req.user!.id])).rows[0];
+  const team = x.teamId ? (await pool.query('SELECT name FROM teams WHERE id = $1', [x.teamId])).rows[0] : null;
+  const hackathon = x.hackathonId ? (await pool.query('SELECT title FROM hackathons WHERE id = $1', [x.hackathonId])).rows[0] : null;
+  const what = x.result ? RESULT_LABEL[x.result] : x.outcome;
+  await notifyStaffCovering([req.user!.id, ...teamMemberIds], ['faculty', 'hod'], {
+    type: 'achievement_submitted',
+    title: x.result === 'winner' || x.result === 'runner_up' ? `New win logged: ${what}` : 'New achievement logged',
+    body: `${student?.full_name ?? 'A student'} (${student?.institutional_id ?? ''}${student?.section ? `, Section ${student.section}` : ''})${team ? ` for team ${team.name}` : ''} logged "${x.title}" — ${what}${hackathon ? ` at ${hackathon.title}` : ''}. Verify it under Review & Verify.`,
+    actionUrl: '/review',
+  });
   res.status(201).json(rows[0]);
 }));
 
-achievementsRoutes.get('/achievements', authenticate, allow('faculty', 'admin'), ah(async (req, res) => {
+achievementsRoutes.get('/achievements', authenticate, allow(...STUDENT_DATA_ROLES), ah(async (req: AuthRequest, res) => {
   const statusFilter = typeof req.query.status === 'string' ? req.query.status : null;
-  const { rows } = await pool.query(`SELECT ${achievementSelectFields}, u.full_name AS student_name, h.title AS hackathon_title, p.title AS project_title
-    FROM achievements a JOIN users u ON u.id = a.student_id LEFT JOIN hackathons h ON h.id = a.hackathon_id LEFT JOIN projects p ON p.id = a.project_id ${achievementJoins}
-    WHERE ($1::text IS NULL OR a.status::text = $1) ORDER BY a.created_at DESC`, [statusFilter]);
+  const { rows } = await pool.query(`SELECT ${achievementSelectFields}, u.full_name AS student_name, u.institutional_id AS student_reg_no, sp.section AS student_section, h.title AS hackathon_title, p.title AS project_title, t.name AS team_name
+    FROM achievements a JOIN users u ON u.id = a.student_id LEFT JOIN student_profiles sp ON sp.user_id = u.id LEFT JOIN hackathons h ON h.id = a.hackathon_id LEFT JOIN projects p ON p.id = a.project_id LEFT JOIN teams t ON t.id = a.team_id ${achievementJoins}
+    WHERE ($1::text IS NULL OR a.status::text = $1)
+      AND (${studentIdInScopeSql(req.user!.role, '$2', 'a.student_id')} OR (a.team_id IS NOT NULL AND ${teamInScopeSql(req.user!.role, '$2', 'a.team_id')}))
+    ORDER BY a.created_at DESC`, [statusFilter, req.user!.id]);
   res.json(rows);
 }));
 
-achievementsRoutes.patch('/achievements/:id', authenticate, allow('faculty', 'admin'), ah(async (req: AuthRequest, res) => {
+achievementsRoutes.patch('/achievements/:id', authenticate, allow(...REVIEWER_ROLES), ah(async (req: AuthRequest, res) => {
+  if (!isUuid(req.params.id)) return res.status(400).json({ error: 'Invalid id.' });
+  const target = (await pool.query('SELECT student_id, team_id FROM achievements WHERE id = $1', [req.params.id])).rows[0];
+  if (!target || !(await canAccessStudent(req.user!, target.student_id) || (target.team_id && await canAccessTeam(req.user!, target.team_id)))) return res.status(404).json({ error: 'Achievement not found.' });
   const input = z.object({ status: z.enum(['approved', 'rejected', 'changes_requested']), reviewNotes: z.string().max(2000).optional() }).safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: input.error.issues });
   const { rows } = await pool.query(`UPDATE achievements SET status = $2, verified_by = $3, verified_at = now(), review_notes = $4 WHERE id = $1 RETURNING *`,
@@ -161,10 +193,12 @@ achievementsRoutes.post('/achievements/:id/certificate', authenticate, allow('st
 }));
 
 achievementsRoutes.get('/achievements/:id/certificate', authenticate, ah(async (req: AuthRequest, res) => {
+  if (!isUuid(req.params.id)) return res.status(400).json({ error: 'Invalid id.' });
   const achievement = (await pool.query('SELECT student_id, certificate_file_id FROM achievements WHERE id = $1', [req.params.id])).rows[0];
   if (!achievement || !achievement.certificate_file_id) return res.status(404).json({ error: 'No certificate on file.' });
   const isOwner = achievement.student_id === req.user!.id;
-  const isReviewer = req.user!.role === 'faculty' || req.user!.role === 'admin';
+  // Staff may view certificates only for students inside their scope.
+  const isReviewer = !isOwner && STUDENT_DATA_ROLES.includes(req.user!.role) && await canAccessStudent(req.user!, achievement.student_id);
   if (!isOwner && !isReviewer) return res.status(403).json({ error: 'You do not have permission to view this certificate.' });
 
   const file = (await pool.query('SELECT storage_key, original_name, content_type FROM files WHERE id = $1', [achievement.certificate_file_id])).rows[0];

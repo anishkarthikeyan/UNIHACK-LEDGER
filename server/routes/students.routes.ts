@@ -1,18 +1,31 @@
 import { Router } from 'express';
-import { pool } from '../db/pool';
+import { z } from 'zod';
 import { ah } from '../middleware/asyncHandler';
-import { allow, authenticate } from '../middleware/auth';
+import { allow, authenticate, AuthRequest, STUDENT_DATA_ROLES } from '../middleware/auth';
+import { studentDetail, studentLookup } from '../services/analytics/cohortAnalytics';
 
-// Behavior unchanged from the original monolithic server/index.ts — moved verbatim.
+// Student lookup. Every caller gets only the students inside their scope (server/lib/scope.ts):
+// a Faculty Advisor their assigned sections, an SDE Coordinator SDE students only, the HOD the
+// whole department. Students get 403 — this is a staff endpoint.
 export const studentsRoutes = Router();
 
-studentsRoutes.get('/students', authenticate, allow('faculty', 'admin'), ah(async (req, res) => {
-  const search = typeof req.query.search === 'string' ? req.query.search : '';
-  const { rows } = await pool.query(`SELECT u.id, u.full_name, u.email, u.institutional_id, d.code AS department_code, sp.year_of_study,
-    COUNT(DISTINCT p.id)::int AS project_count, COUNT(DISTINCT r.id) FILTER (WHERE r.status = 'approved')::int AS hackathon_count
-    FROM users u LEFT JOIN departments d ON d.id = u.department_id LEFT JOIN student_profiles sp ON sp.user_id = u.id
-    LEFT JOIN projects p ON p.owner_id = u.id LEFT JOIN registrations r ON r.student_id = u.id
-    WHERE u.role = 'student' AND (u.full_name ILIKE $1 OR u.institutional_id ILIKE $1)
-    GROUP BY u.id, d.code, sp.year_of_study ORDER BY u.full_name ASC`, [`%${search}%`]);
-  res.json(rows);
+export const cohortFilterSchema = z.object({
+  batch: z.coerce.number().int().min(2000).max(2100).optional(),
+  section: z.string().regex(/^[A-Z]{1,2}$/).optional(),
+  sde: z.enum(['SDE', 'Non-SDE']).optional(),
+});
+
+studentsRoutes.get('/students', authenticate, allow(...STUDENT_DATA_ROLES), ah(async (req: AuthRequest, res) => {
+  const input = cohortFilterSchema.extend({ search: z.string().max(100).optional() }).safeParse(req.query);
+  if (!input.success) return res.status(400).json({ error: input.error.issues });
+  const q = input.data;
+  res.json(await studentLookup(req.user!, { batchYear: q.batch, section: q.section, sdeStatus: q.sde, search: q.search }));
+}));
+
+studentsRoutes.get('/students/:id', authenticate, allow(...STUDENT_DATA_ROLES), ah(async (req: AuthRequest, res) => {
+  if (!z.string().uuid().safeParse(req.params.id).success) return res.status(400).json({ error: 'Invalid student id.' });
+  const detail = await studentDetail(req.user!, req.params.id);
+  // 404 rather than 403 for out-of-scope students, so the endpoint can't be used to probe which ids exist.
+  if (!detail) return res.status(404).json({ error: 'Student not found.' });
+  res.json(detail);
 }));

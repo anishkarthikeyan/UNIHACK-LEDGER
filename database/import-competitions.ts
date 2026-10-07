@@ -3,6 +3,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Pool, PoolClient } from 'pg';
+import { parseCsv } from './lib/csv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,10 +14,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // every write is an upsert.
 //
 // Usage:
-//   tsx database/import-competitions.ts [path-to-csv] [--dry-run]
+//   tsx database/import-competitions.ts [path-to-csv] [--dry-run] [--archive-missing]
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
+// Archives previously imported competitions that are no longer in this sheet (they disappear
+// from Explore but keep their registrations/history). Rows created in the app are never touched.
+const archiveMissing = args.includes('--archive-missing');
 const csvArg = args.find((a) => !a.startsWith('--'));
 const csvPath = csvArg
   ? path.resolve(csvArg)
@@ -57,49 +61,6 @@ interface Summary {
   organizersCreated: Set<string>;
   roundsWritten: number;
   eligibilityRowsWritten: number;
-}
-
-// --- CSV parsing (RFC 4180: quoted fields, embedded commas, embedded newlines, "" escapes) ---
-//
-// Splitting the file into lines with String.split(/\r?\n/) BEFORE parsing quotes — the original
-// approach here — corrupts any row whose quoted field contains a real line break. This sheet has
-// exactly that: row 30 (IndiaSkills Competition 2026-2027) wraps its Organizer field across two
-// physical lines, and row 39 (Open Sandbox Development Workshop & / 0xCON 2026) wraps its
-// Competition Name field the same way. Splitting first turns each into two broken rows — one
-// with an unterminated quote that silently swallows the next several fields into one giant
-// string, the other a fragment with a blank name that gets skipped as "invalid". Confirmed
-// empirically: the line-split version reported 149 "rows" (146 real + 1 footer + 2 corrupt
-// fragments) with a phantom insert, instead of the correct 146 + 1 footer.
-//
-// The fix: tokenize the whole file in one pass, character by character, and only treat a
-// newline as a row boundary when we are NOT inside an open quote.
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cur = '';
-  let inQuotes = false;
-  let i = 0;
-  const n = text.length;
-  const endField = () => { row.push(cur); cur = ''; };
-  const endRow = () => { endField(); rows.push(row); row = []; };
-  while (i < n) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { cur += '"'; i += 2; continue; }
-        inQuotes = false; i++; continue;
-      }
-      cur += ch; i++; continue;
-    }
-    if (ch === '"') { inQuotes = true; i++; continue; }
-    if (ch === ',') { endField(); i++; continue; }
-    if (ch === '\r') { i++; continue; } // normalize CRLF — the \n right after ends the row
-    if (ch === '\n') { endRow(); i++; continue; }
-    cur += ch; i++;
-  }
-  // Final row, if the file doesn't end with a trailing newline.
-  if (cur !== '' || row.length > 0) endRow();
-  return rows.map((r) => r.map((f) => f.trim()));
 }
 
 function loadRows(): ImportRow[] {
@@ -288,11 +249,11 @@ async function writeAll(client: PoolClient, prepared: PreparedRow[], summary: Su
     `INSERT INTO hackathons (
        title, slug, organizer, description, mode, registration_closes_at,
        status, external_ref, external_status,
-       external_registered_teams, external_registered_students, source, prize_pool
+       external_registered_teams, external_registered_students, source, prize_pool, max_team_size
      )
      SELECT title, slug, organizer, description, 'hybrid', registration_closes_at,
        status::hackathon_status, external_ref, external_status,
-       external_registered_teams, external_registered_students, 'csv_import', prize_pool
+       external_registered_teams, external_registered_students, 'csv_import', prize_pool, 4
      FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::timestamptz[], $6::text[], $7::text[], $8::text[], $9::int[], $10::int[], $11::text[])
        AS t(title, slug, organizer, description, registration_closes_at, status, external_ref, external_status, external_registered_teams, external_registered_students, prize_pool)
      ON CONFLICT (external_ref) DO UPDATE SET
@@ -442,13 +403,27 @@ async function main() {
     return;
   }
 
-  const prepared = rows.map((row) => prepareRow(row, summary)).filter((r): r is PreparedRow => r !== null);
+  const seenRefs = new Set<string>();
+  const prepared = rows.map((row) => prepareRow(row, summary)).filter((r): r is PreparedRow => {
+    if (!r) return false;
+    if (seenRefs.has(r.externalRef)) {
+      summary.skipped.push({ line: r.row.lineNumber, name: r.name, reason: 'Duplicate of an earlier row (same name and organizer).' });
+      return false;
+    }
+    seenRefs.add(r.externalRef);
+    return true;
+  });
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgresql://unihack:unihack_local_password@127.0.0.1:5432/unihack_ledger' });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await writeAll(client, prepared, summary);
+    if (archiveMissing) {
+      const archived = await client.query(`UPDATE hackathons SET status = 'archived', updated_at = now()
+        WHERE source = 'csv_import' AND status <> 'archived' AND NOT (external_ref = ANY($1::text[])) RETURNING title`, [[...seenRefs]]);
+      console.log(`Archived (no longer in sheet): ${archived.rowCount}`);
+    }
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');

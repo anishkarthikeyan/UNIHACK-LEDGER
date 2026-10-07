@@ -5,7 +5,9 @@ import { pool } from '../db/pool';
 import { audit } from '../lib/audit';
 import { slugify } from '../lib/slugify';
 import { ah } from '../middleware/asyncHandler';
-import { allow, authenticate, AuthRequest } from '../middleware/auth';
+import { allow, authenticate, AuthRequest, REVIEWER_ROLES, STUDENT_DATA_ROLES } from '../middleware/auth';
+import { isUuid } from '../lib/validation';
+import { canAccessStudent, studentIdInScopeSql } from '../lib/scope';
 import { services } from '../services';
 import { approvalEmail } from '../services/email/templates';
 
@@ -28,11 +30,12 @@ projectsRoutes.get('/projects/showcase', authenticate, ah(async (_req, res) => {
   res.json(rows);
 }));
 
-projectsRoutes.get('/projects/all', authenticate, allow('faculty', 'admin'), ah(async (_req, res) => {
+projectsRoutes.get('/projects/all', authenticate, allow(...STUDENT_DATA_ROLES), ah(async (req: AuthRequest, res) => {
   const { rows } = await pool.query(`SELECT p.*, h.title AS hackathon_title, t.name AS team_name, u.full_name AS owner_name,
     (SELECT status FROM project_reviews WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) AS review_status
     FROM projects p LEFT JOIN hackathons h ON h.id = p.hackathon_id LEFT JOIN teams t ON t.id = p.team_id JOIN users u ON u.id = p.owner_id
-    ORDER BY p.updated_at DESC`);
+    WHERE ${studentIdInScopeSql(req.user!.role, '$1', 'p.owner_id')}
+    ORDER BY p.updated_at DESC`, [req.user!.id]);
   res.json(rows);
 }));
 
@@ -50,12 +53,13 @@ projectsRoutes.get('/projects/:id', authenticate, ah(async (req: AuthRequest, re
   res.json(rows[0]);
 }));
 
-projectsRoutes.post('/projects/:id/review', authenticate, allow('faculty', 'admin'), ah(async (req: AuthRequest, res) => {
+projectsRoutes.post('/projects/:id/review', authenticate, allow(...REVIEWER_ROLES), ah(async (req: AuthRequest, res) => {
+  if (!isUuid(req.params.id)) return res.status(400).json({ error: 'Invalid id.' });
   const input = z.object({ status: z.enum(['approved', 'changes_requested', 'rejected']), feedback: z.string().optional(), score: z.number().min(0).max(100).optional() }).safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: input.error.issues });
   const x = input.data;
   const project = (await pool.query('SELECT title, owner_id, team_id FROM projects WHERE id = $1', [req.params.id])).rows[0];
-  if (!project) return res.status(404).json({ error: 'Project not found.' });
+  if (!project || !(await canAccessStudent(req.user!, project.owner_id))) return res.status(404).json({ error: 'Project not found.' });
   const { rows } = await pool.query(`INSERT INTO project_reviews (project_id, reviewer_id, score, feedback, status) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
     [req.params.id, req.user!.id, x.score ?? null, x.feedback ?? null, x.status]);
   await audit(req.user!.id, 'review', 'project', req.params.id, { status: x.status });

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Trophy, Star, Target, CheckCircle2, Medal, Upload, X, Loader2, Paperclip, Eye, AlertTriangle } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import type { Achievement } from '../types';
+import { RESULT_LABEL } from '../types';
+import type { Achievement, AchievementResult, Registration } from '../types';
 
 // Opens a downloaded certificate blob in a new tab (images/PDFs preview inline there; anything
 // else the browser can't render triggers its native download prompt). blob: URLs are revoked
@@ -31,7 +32,9 @@ export default function StudentAchievements() {
   const [error, setError] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [title, setTitle] = useState('');
-  const [outcome, setOutcome] = useState('Participant');
+  const [result, setResult] = useState<AchievementResult>('participant');
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [registrationId, setRegistrationId] = useState('');
   const [achievedOn, setAchievedOn] = useState('');
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -46,18 +49,27 @@ export default function StudentAchievements() {
   };
 
   useEffect(load, []);
+  // Competitions this student (or their team) entered — logging a result against one links the
+  // hackathon and, for team entries, credits the whole team.
+  useEffect(() => { api.registrations.mine().then(setRegistrations).catch(() => setRegistrations([])); }, []);
+  const entries = registrations.filter((r) => r.status === 'approved' || r.status === 'pending_verification');
+  const entry = entries.find((r) => r.id === registrationId);
 
   const submit = async () => {
-    if (!title.trim()) { setError('Hackathon name is required.'); return; }
+    const name = entry?.hackathon_title ?? title.trim();
+    if (!name) { setError('Choose a competition or enter its name.'); return; }
     setSubmitting(true);
     setError(null);
     try {
-      const created = await api.achievements.create({ title: title.trim(), outcome, achievedOn: achievedOn || undefined });
+      const created = await api.achievements.create({
+        title: name, outcome: `${RESULT_LABEL[result]}${entry?.team_name ? ` — team ${entry.team_name}` : ''}`, result,
+        hackathonId: entry?.hackathon_id, teamId: entry?.team_id ?? undefined, achievedOn: achievedOn || undefined,
+      });
       if (certificateFile) {
         try { await api.achievements.uploadCertificate(created.id, certificateFile); }
         catch (err) { setError(err instanceof ApiError ? `Record saved, but the certificate failed to upload: ${err.message}` : 'Record saved, but the certificate failed to upload.'); }
       }
-      setTitle(''); setOutcome('Participant'); setAchievedOn(''); setCertificateFile(null);
+      setTitle(''); setResult('participant'); setRegistrationId(''); setAchievedOn(''); setCertificateFile(null);
       setShowUploadModal(false);
       load();
     } catch (err) {
@@ -240,21 +252,27 @@ export default function StudentAchievements() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Hackathon Name</label>
-                <input value={title} onChange={(e) => setTitle(e.target.value)} type="text" className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold transition-colors" placeholder="e.g. Code for Good 2025" />
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Competition</label>
+                <select value={registrationId} onChange={(e) => setRegistrationId(e.target.value)}
+                  className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold transition-colors appearance-none">
+                  <option value="">Other — not registered through UniHack</option>
+                  {entries.map((r) => <option key={r.id} value={r.id}>{r.hackathon_title}{r.team_name ? ` · team ${r.team_name}` : ' · solo'}</option>)}
+                </select>
+                {entry?.team_name && <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 mt-2">Logged for the whole team — every member gets credit</p>}
               </div>
 
+              {!entry && (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Hackathon Name</label>
+                  <input value={title} onChange={(e) => setTitle(e.target.value)} type="text" className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold transition-colors" placeholder="e.g. Code for Good 2025" />
+                </div>
+              )}
+
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Outcome</label>
-                <select
-                  value={outcome}
-                  onChange={(e) => setOutcome(e.target.value)}
-                  className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold transition-colors appearance-none"
-                >
-                  <option value="Participant">Participant</option>
-                  <option value="Finalist">Finalist</option>
-                  <option value="Winner (1st)">Winner (1st)</option>
-                  <option value="Runner-up">Runner-up</option>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Result</label>
+                <select value={result} onChange={(e) => setResult(e.target.value as AchievementResult)}
+                  className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold transition-colors appearance-none">
+                  {(Object.keys(RESULT_LABEL) as AchievementResult[]).map((r) => <option key={r} value={r}>{RESULT_LABEL[r]}</option>)}
                 </select>
               </div>
 

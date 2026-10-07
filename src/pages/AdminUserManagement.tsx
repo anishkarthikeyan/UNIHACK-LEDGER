@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Search, UserCheck, UserX, Shield, X, Loader2 } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
-import type { AdminUser, Department } from '../types';
+import { ROLE_LABEL } from '../types';
+import type { AdminUser, Department, Role } from '../types';
 
 export default function AdminUserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,7 +12,7 @@ export default function AdminUserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newUser, setNewUser] = useState({ institutionalId: '', email: '', fullName: '', role: 'student' as 'student' | 'faculty' | 'admin', departmentCode: '' });
+  const [newUser, setNewUser] = useState({ institutionalId: '', email: '', fullName: '', role: 'student' as Role, departmentCode: '' });
   const [submitting, setSubmitting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -40,7 +41,7 @@ export default function AdminUserManagement() {
     }
   };
 
-  const changeRole = async (u: AdminUser, role: 'student' | 'faculty' | 'admin') => {
+  const changeRole = async (u: AdminUser, role: Role) => {
     if (role === u.role) return;
     setBusyId(u.id);
     setError(null);
@@ -110,9 +111,7 @@ export default function AdminUserManagement() {
         </div>
         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="px-4 py-3 bg-neutral-900 border-2 border-neutral-800 rounded-full text-[10px] font-bold uppercase tracking-widest text-white outline-none appearance-none">
           <option value="">All Roles</option>
-          <option value="student">Student</option>
-          <option value="faculty">Faculty</option>
-          <option value="admin">Admin</option>
+          {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
         </select>
       </div>
 
@@ -145,16 +144,14 @@ export default function AdminUserManagement() {
                       <select
                         value={user.role}
                         disabled={busyId === user.id}
-                        onChange={(e) => changeRole(user, e.target.value as 'student' | 'faculty' | 'admin')}
+                        onChange={(e) => changeRole(user, e.target.value as Role)}
                         className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed appearance-none border ${
                           user.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
                           user.role === 'faculty' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                           'bg-yellow-400/20 text-yellow-500 border-yellow-400/20'
                         }`}
                       >
-                        <option value="student">student</option>
-                        <option value="faculty">faculty</option>
-                        <option value="admin">admin</option>
+                        {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                       </select>
                     </td>
                     <td className="px-6 py-4">
@@ -204,9 +201,7 @@ export default function AdminUserManagement() {
               <input value={newUser.institutionalId} onChange={(e) => setNewUser({ ...newUser, institutionalId: e.target.value })} placeholder="Institutional ID (e.g. ST-1234)" className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold" />
               <input value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} type="email" placeholder="Email" className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold" />
               <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as typeof newUser.role })} className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold appearance-none">
-                <option value="student">Student</option>
-                <option value="faculty">Faculty</option>
-                <option value="admin">Admin</option>
+                {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
               </select>
               <select value={newUser.departmentCode} onChange={(e) => setNewUser({ ...newUser, departmentCode: e.target.value })} className="w-full p-4 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-white outline-none focus:border-yellow-400 text-sm font-bold appearance-none">
                 <option value="">No department</option>

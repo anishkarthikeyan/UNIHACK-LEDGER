@@ -33,13 +33,27 @@ want it anyway.
 7. Start the frontend: `npm run dev` (in another terminal) — served at http://localhost:3000, proxying `/api` to the backend
 8. Check the API directly: `curl http://localhost:4000/health`
 
-The database seeds three demo accounts, all with password `Demo@123`:
+### Students: real CSE 2024–2028 roster
 
-| Role | Email |
-| --- | --- |
-| Student | `student@demo.edu` |
-| Faculty | `faculty@demo.edu` |
-| Admin | `admin@demo.edu` |
+Students come from the institutional master sheet, not from a seed. The sheet is kept outside the
+repo; pass its path to the importer:
+
+```
+npm run db:import:students -- "/path/to/student-master.csv" --dry-run          # validate only
+npm run db:import:students -- "/path/to/student-master.csv" --retire-synthetic # import
+```
+
+- Matches by Reg. No. Re-running updates existing students and never creates duplicates or
+  touches teams/registrations/projects/achievements.
+- Rows with missing/invalid real fields, or a Reg. No. that appears more than once, are rejected
+  and listed. Fix them in the sheet and re-run.
+- New accounts get no password unless `STUDENT_INITIAL_PASSWORD` is set. It then applies only to
+  test accounts (`--password-scope=all` for everyone), and never overwrites an existing password.
+- `--retire-synthetic` removes the old generated `studentNNN@unihack.edu` accounts (deactivates
+  any that other records still reference).
+
+`npm run db:seed:users` now seeds only synthetic faculty and the admin account. The old
+`*@demo.edu` accounts are inactive.
 
 ### Optional: Docker
 

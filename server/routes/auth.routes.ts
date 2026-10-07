@@ -7,7 +7,8 @@ import { config } from '../config/env';
 import { pool } from '../db/pool';
 import { audit } from '../lib/audit';
 import { ah } from '../middleware/asyncHandler';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, AuthRequest, isStaff } from '../middleware/auth';
+import { scopeAssignmentsOf } from '../lib/scope';
 import { authRateLimit } from '../middleware/rateLimit';
 import { services } from '../services';
 import { passwordResetEmail } from '../services/email/templates';
@@ -84,10 +85,11 @@ authRoutes.post('/auth/reset-password', authRateLimit, ah(async (req, res) => {
 authRoutes.get('/auth/me', authenticate, ah(async (req: AuthRequest, res) => {
   const { rows } = await pool.query(`SELECT u.id, u.institutional_id, u.email, u.full_name, u.role, u.status, u.avatar_url,
     d.code AS department_code, d.name AS department_name,
-    sp.programme, sp.year_of_study, sp.section, sp.interests, sp.tech_stack, sp.phone AS student_phone,
+    sp.programme, COALESCE(student_year_of_study(sp.batch_year), sp.year_of_study) AS year_of_study, sp.section, sp.batch_year, sp.sde_status, sp.interests, sp.tech_stack, sp.phone AS student_phone,
     fp.designation, fp.phone AS faculty_phone
     FROM users u LEFT JOIN departments d ON d.id = u.department_id
     LEFT JOIN student_profiles sp ON sp.user_id = u.id LEFT JOIN faculty_profiles fp ON fp.user_id = u.id
     WHERE u.id = $1`, [req.user!.id]);
-  res.json(rows[0]);
+  // Staff see which part of the hierarchy they cover (empty = no students visible yet).
+  res.json({ ...rows[0], scope: isStaff(req.user!.role) ? await scopeAssignmentsOf(req.user!.id) : undefined });
 }));

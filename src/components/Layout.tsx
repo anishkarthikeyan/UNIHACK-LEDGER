@@ -19,18 +19,20 @@ import {
   LogOut,
   PlusCircle,
   Sparkles,
-  Loader2
+  Loader2,
+  Layers
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
-import type { Hackathon } from '../types';
+import { ROLE_LABEL } from '../types';
+import type { Hackathon, Role } from '../types';
 import type { NavigateFn } from '../App';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: NavigateFn;
-  role: 'student' | 'faculty' | 'admin';
+  role: Role;
   onLogout: () => void;
 }
 
@@ -42,8 +44,14 @@ function initialsOf(name: string) {
 // The two competition-management roles use slightly different tab ids for the hackathon
 // detail screen (a pre-existing naming quirk in App.tsx's router) — resolve it once here
 // rather than duplicating the branch everywhere a search result is opened.
-function hackathonDetailTab(role: 'student' | 'faculty' | 'admin') {
+function hackathonDetailTab(role: Role) {
   return role === 'student' ? 'hackathon-detail' : 'hackathons-detail';
+}
+
+// Coordinator, SDE Coordinator and HOD only monitor their cohort in this phase — no hackathon
+// management screens, so the hackathon search (which opens one) is hidden for them.
+function isCohortRole(role: Role) {
+  return role === 'coordinator' || role === 'sde_coordinator' || role === 'hod';
 }
 
 export default function Layout({ children, activeTab, setActiveTab, role, onLogout }: LayoutProps) {
@@ -114,6 +122,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
       return [
         { name: 'Dashboard', icon: LayoutDashboard, id: 'dashboard' },
         { name: 'Hackathons', icon: Trophy, id: 'hackathons' },
+        { name: 'My Sections', icon: Layers, id: 'cohort' },
         { name: 'Participants', icon: Users, id: 'participants' },
         { name: 'Teams', icon: Users, id: 'teams' },
         { name: 'Projects', icon: Briefcase, id: 'projects' },
@@ -124,10 +133,19 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
         { name: 'Settings', icon: Settings, id: 'settings' },
       ];
     }
+    if (isCohortRole(role)) {
+      return [
+        { name: 'Cohort Overview', icon: LayoutDashboard, id: 'dashboard' },
+        { name: 'Teams', icon: Users, id: 'teams' },
+        { name: 'Notifications', icon: Bell, id: 'notifications' },
+        { name: 'Settings', icon: Settings, id: 'settings' },
+      ];
+    }
     return [
       { name: 'Dashboard', icon: LayoutDashboard, id: 'dashboard' },
       { name: 'Competitions', icon: Trophy, id: 'hackathons' },
       { name: 'User Management', icon: Users, id: 'users' },
+      { name: 'Scope Assignments', icon: Layers, id: 'scopes' },
       { name: 'Audit Logs', icon: FileText, id: 'audit' },
       { name: 'System Settings', icon: Settings, id: 'settings' },
       { name: 'Profile', icon: UserCircle, id: 'profile' },
@@ -153,6 +171,15 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
         { name: 'Events', icon: Trophy, id: 'hackathons' },
         { name: 'Review', icon: CheckSquare, id: 'review' },
         { name: 'Teams', icon: Users, id: 'teams' },
+        { name: 'More', icon: Menu, id: 'drawer_trigger' },
+      ];
+    }
+    if (isCohortRole(role)) {
+      return [
+        { name: 'Cohort', icon: LayoutDashboard, id: 'dashboard' },
+        { name: 'Teams', icon: Users, id: 'teams' },
+        { name: 'Alerts', icon: Bell, id: 'notifications' },
+        // Opens the drawer, which holds Settings and Logout (the only mobile logout entry point).
         { name: 'More', icon: Menu, id: 'drawer_trigger' },
       ];
     }
@@ -219,7 +246,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
               {displayName}
             </p>
             <p className="text-yellow-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-              <Sparkles size={10} /> {role} Account
+              <Sparkles size={10} /> {ROLE_LABEL[role]} Account
             </p>
           </div>
         </div>
@@ -324,7 +351,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
             </div>
 
             {/* Search Input (Desktop & Tablet) */}
-            <div className="relative w-full max-w-md hidden sm:block">
+            <div className="relative w-full max-w-md hidden sm:block" style={isCohortRole(role) ? { display: 'none' } : undefined}>
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
               <input
                 type="text"
@@ -363,6 +390,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-full sm:hidden"
+              style={isCohortRole(role) ? { display: 'none' } : undefined}
             >
               <Search size={22} />
             </button>
@@ -395,7 +423,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
                   {displayName}
                 </p>
                 <p className="text-neutral-400 text-[10px] uppercase font-bold tracking-widest">
-                  {role} portal
+                  {ROLE_LABEL[role]} portal
                 </p>
               </div>
             </div>

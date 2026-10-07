@@ -131,8 +131,8 @@ CREATE TABLE registrations (
   rejection_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CHECK ((participation_mode = 'solo' AND student_id IS NOT NULL AND team_id IS NULL) OR (participation_mode = 'team' AND team_id IS NOT NULL AND student_id IS NULL)),
-  UNIQUE NULLS NOT DISTINCT (hackathon_id, student_id),
-  UNIQUE NULLS NOT DISTINCT (hackathon_id, team_id)
+  UNIQUE (hackathon_id, student_id),
+  UNIQUE (hackathon_id, team_id)
 );
 
 CREATE TABLE files (

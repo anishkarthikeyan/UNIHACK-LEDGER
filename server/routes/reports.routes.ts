@@ -1,15 +1,18 @@
 import { Router } from 'express';
 import { pool } from '../db/pool';
 import { ah } from '../middleware/asyncHandler';
-import { allow, authenticate } from '../middleware/auth';
+import { allow, authenticate, AuthRequest } from '../middleware/auth';
+import { registrationOwnerSql, studentIdInScopeSql } from '../lib/scope';
 
-// Behavior unchanged from the original monolithic server/index.ts — moved verbatim.
+// Participation/win counts cover only the caller's student scope (server/lib/scope.ts); the
+// domain breakdown is about hackathons, not students, so it stays global.
 export const reportsRoutes = Router();
 
-reportsRoutes.get('/reports/summary', authenticate, allow('faculty', 'admin'), ah(async (_req, res) => {
-  const participation = await pool.query(`SELECT COUNT(*)::int AS n FROM registrations WHERE status = 'approved'`);
-  const totalSubmitted = await pool.query(`SELECT COUNT(*)::int AS n FROM registrations`);
-  const wins = await pool.query(`SELECT COUNT(*)::int AS n FROM achievements WHERE status = 'approved'`);
+reportsRoutes.get('/reports/summary', authenticate, allow('faculty', 'admin'), ah(async (req: AuthRequest, res) => {
+  const { role, id } = req.user!;
+  const participation = await pool.query(`SELECT COUNT(*)::int AS n FROM registrations r WHERE r.status = 'approved' AND ${studentIdInScopeSql(role, '$1', registrationOwnerSql('r'))}`, [id]);
+  const totalSubmitted = await pool.query(`SELECT COUNT(*)::int AS n FROM registrations r WHERE ${studentIdInScopeSql(role, '$1', registrationOwnerSql('r'))}`, [id]);
+  const wins = await pool.query(`SELECT COUNT(*)::int AS n FROM achievements a WHERE a.status = 'approved' AND ${studentIdInScopeSql(role, '$1', 'a.student_id')}`, [id]);
   const domainBreakdown = await pool.query(`SELECT unnest(domains) AS domain, COUNT(*)::int AS n FROM hackathons GROUP BY domain ORDER BY n DESC LIMIT 5`);
   res.json({
     totalParticipants: participation.rows[0].n,
