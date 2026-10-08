@@ -64,6 +64,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
   const [searchResults, setSearchResults] = useState<Hackathon[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
   const displayName = user?.full_name ?? 'Guest';
   const initials = (initialsOf(displayName) || 'U').toUpperCase();
 
@@ -179,8 +180,10 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
         { name: 'Cohort', icon: LayoutDashboard, id: 'dashboard' },
         { name: 'Teams', icon: Users, id: 'teams' },
         { name: 'Alerts', icon: Bell, id: 'notifications' },
-        // Opens the drawer, which holds Settings and Logout (the only mobile logout entry point).
-        { name: 'More', icon: Menu, id: 'drawer_trigger' },
+        { name: 'Settings', icon: Settings, id: 'settings' },
+        // Cohort roles have few screens, so logout gets a direct bottom-nav slot instead of
+        // being buried in the drawer.
+        { name: 'Logout', icon: LogOut, id: 'logout_trigger' },
       ];
     }
     return [
@@ -194,9 +197,17 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
 
   const bottomNavItems = getBottomNavItems();
 
+  // Every logout entry point goes through a confirmation so a stray tap doesn't sign the user out.
+  const requestLogout = () => {
+    setMobileDrawerOpen(false);
+    setConfirmLogoutOpen(true);
+  };
+
   const handleNavClick = (id: string) => {
     if (id === 'drawer_trigger') {
       setMobileDrawerOpen(true);
+    } else if (id === 'logout_trigger') {
+      requestLogout();
     } else {
       setActiveTab(id);
       setMobileDrawerOpen(false);
@@ -275,7 +286,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
         {/* Mobile Drawer Footer */}
         <div className="p-4 border-t border-neutral-800 space-y-2">
           <button 
-            onClick={onLogout} 
+            onClick={requestLogout} 
             className="flex items-center text-xs font-bold uppercase tracking-widest text-red-400 hover:text-red-300 w-full py-3 px-4 rounded-xl bg-red-950/30 border border-red-900/40"
           >
             <LogOut size={18} />
@@ -326,8 +337,9 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
         
         <div className="p-4 border-t border-neutral-800">
           <button 
-            onClick={onLogout} 
-            className="flex items-center text-xs font-bold uppercase tracking-widest text-neutral-400 hover:text-red-400 w-full py-2.5 px-2 transition-colors"
+            onClick={requestLogout} 
+            title="Logout"
+            className="flex items-center text-xs font-bold uppercase tracking-widest text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded-xl w-full py-2.5 px-3.5 transition-colors"
           >
             <LogOut size={20} />
             {sidebarOpen && <span className="ml-3">Logout</span>}
@@ -413,7 +425,7 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
                 mobile only, back to its original 36px at md: for an unchanged desktop header. */}
             <div className="flex items-center gap-2.5 pl-2 sm:pl-4 border-l border-neutral-800">
               <button
-                onClick={() => setActiveTab('profile')}
+                onClick={() => setActiveTab(isCohortRole(role) ? 'settings' : 'profile')}
                 className="w-10 h-10 md:w-9 md:h-9 bg-yellow-400 text-black font-black rounded-full flex items-center justify-center text-sm md:text-xs shadow-md ring-2 ring-yellow-400/30 hover:scale-105 transition-transform shrink-0"
               >
                 {initials}
@@ -508,6 +520,47 @@ export default function Layout({ children, activeTab, setActiveTab, role, onLogo
           </div>
         </div>
       </main>
+
+      {/* Logout confirmation */}
+      {confirmLogoutOpen && (
+        <div
+          onClick={() => setConfirmLogoutOpen(false)}
+          className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-confirm-title"
+            className="w-full max-w-sm bg-neutral-900 border-2 border-neutral-800 rounded-3xl p-6 shadow-2xl"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-red-950/40 border border-red-900/50 text-red-400 flex items-center justify-center mb-4">
+              <LogOut size={22} />
+            </div>
+            <h2 id="logout-confirm-title" className="text-lg font-black uppercase tracking-wider text-white">
+              Log out?
+            </h2>
+            <p className="text-xs text-neutral-400 mt-2">
+              You'll need to sign in again to access the {ROLE_LABEL[role]} portal.
+            </p>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setConfirmLogoutOpen(false)}
+                autoFocus
+                className="flex-1 py-3 rounded-full bg-neutral-800 text-neutral-200 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setConfirmLogoutOpen(false); onLogout(); }}
+                className="flex-1 py-3 rounded-full bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-red-400 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

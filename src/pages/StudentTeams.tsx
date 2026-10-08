@@ -99,8 +99,11 @@ export default function StudentTeams({ onNavigate }: StudentTeamsProps) {
     setInviteMessage(null);
     try {
       await api.teams.invite(team.id, institutionalId);
-      setInviteMessage(`Invitation sent to ${institutionalId}.`);
+      setInviteMessage(`Invitation sent to ${institutionalId.toUpperCase()}.`);
       setInviteTargets((prev) => ({ ...prev, [team.id]: '' }));
+      setRosters((prev) => { const next = { ...prev }; delete next[team.id]; return next; });
+      if (expandedTeamId === team.id) setExpandedTeamId(null);
+      load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to send invite.');
     } finally {
@@ -204,6 +207,11 @@ export default function StudentTeams({ onNavigate }: StudentTeamsProps) {
               <div key={invite.team_id} className="bg-neutral-900 border-2 border-neutral-800 rounded-2xl p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <h4 className="font-black text-sm text-white break-words">{invite.name}</h4>
+                  {invite.invited_by_name && (
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 mt-1 break-words">
+                      Invited by {invite.invited_by_name}{invite.invited_by_institutional_id ? ` (${invite.invited_by_institutional_id})` : ''}
+                    </p>
+                  )}
                   {invite.description && <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1 break-words">{invite.description}</p>}
                 </div>
                 <div className="flex gap-2 shrink-0">
@@ -332,6 +340,7 @@ export default function StudentTeams({ onNavigate }: StudentTeamsProps) {
                           <div>
                             <p className="font-black text-sm group-hover:text-yellow-400 transition-colors">{t.name}</p>
                             {t.description && <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">{t.description}</p>}
+                            <TeamFormationBadge team={t} />
                           </div>
                         </button>
                       </td>
@@ -358,7 +367,7 @@ export default function StudentTeams({ onNavigate }: StudentTeamsProps) {
                             <input
                               value={inviteTargets[t.id] ?? ''}
                               onChange={(e) => setInviteTargets((prev) => ({ ...prev, [t.id]: e.target.value }))}
-                              placeholder="Institutional ID"
+                              placeholder="Register No."
                               className="px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-full text-xs text-white outline-none focus:border-yellow-400 w-32"
                             />
                             <button
@@ -400,16 +409,22 @@ export default function StudentTeams({ onNavigate }: StudentTeamsProps) {
                             <div className="flex items-center justify-center py-4 text-neutral-500"><Loader2 className="animate-spin" size={16} /></div>
                           ) : (
                             <div className="space-y-2">
-                              {(rosters[t.id] ?? []).filter((m) => m.status === 'active').map((m) => (
+                              {(rosters[t.id] ?? []).filter((m) => m.status === 'active' || (m.was_invited && (m.status === 'invited' || m.status === 'declined'))).map((m) => (
                                 <div key={m.user_id} className="flex items-center justify-between gap-3 bg-black border border-neutral-800 rounded-xl px-4 py-2.5">
                                   <div className="flex items-center gap-2 min-w-0">
                                     {m.member_role === 'leader' ? <Shield size={14} className="text-yellow-400 shrink-0" /> : <User size={14} className="text-neutral-500 shrink-0" />}
                                     <div className="min-w-0">
                                       <p className="text-xs font-bold text-white break-words">{m.full_name}</p>
-                                      <p className="text-[10px] text-neutral-500 break-words">{m.email}</p>
+                                      <p className="text-[10px] text-neutral-500 break-words">{m.institutional_id ? `${m.institutional_id} · ` : ''}{m.email}</p>
                                     </div>
                                   </div>
-                                  {t.member_role === 'leader' && m.user_id !== user?.id && (
+                                  {m.status === 'invited' && (
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 flex items-center gap-1 shrink-0"><Clock size={12} /> Invitation pending</span>
+                                  )}
+                                  {m.status === 'declined' && (
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 flex items-center gap-1 shrink-0"><X size={12} /> Declined</span>
+                                  )}
+                                  {m.status === 'active' && t.member_role === 'leader' && m.user_id !== user?.id && (
                                     <button
                                       disabled={memberBusyId === m.user_id}
                                       onClick={() => removeMember(t, m.user_id)}
@@ -433,5 +448,31 @@ export default function StudentTeams({ onNavigate }: StudentTeamsProps) {
         )}
       </div>
     </div>
+  );
+}
+
+// "Formed" only once every invitation has been answered and someone besides the leader has
+// accepted; until then the leader sees how many invitations are still pending.
+function TeamFormationBadge({ team }: { team: Team }) {
+  const pending = team.pending_invite_count ?? 0;
+  const declined = team.declined_invite_count ?? 0;
+  if (pending > 0) {
+    return (
+      <span className="inline-flex items-center gap-1 mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-yellow-400/10 text-yellow-400 border border-yellow-400/30">
+        <Clock size={11} /> {pending} invitation{pending > 1 ? 's' : ''} pending
+      </span>
+    );
+  }
+  if (team.member_count >= 2) {
+    return (
+      <span className="inline-flex items-center gap-1 mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-green-500/10 text-green-400 border border-green-500/30">
+        <CheckCircle2 size={11} /> Team formed
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-neutral-900 text-neutral-400 border border-neutral-800">
+      {declined > 0 ? `${declined} declined · invite someone else` : 'No members yet'}
+    </span>
   );
 }
