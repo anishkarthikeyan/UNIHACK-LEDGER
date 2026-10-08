@@ -14,9 +14,16 @@ import { services } from '../services';
 export const teamsRoutes = Router();
 
 teamsRoutes.get('/teams/mine', authenticate, ah(async (req: AuthRequest, res) => {
-  const { rows } = await pool.query(`SELECT t.*, tm.member_role, tm.status, COUNT(active.user_id)::int AS member_count FROM teams t
-    JOIN team_members tm ON tm.team_id = t.id LEFT JOIN team_members active ON active.team_id = t.id AND active.status = 'active'
-    WHERE tm.user_id = $1 GROUP BY t.id, tm.member_role, tm.status ORDER BY t.created_at DESC`, [req.user!.id]);
+  // Only teams the student is an active member of — an invitee sees the team under their invites
+  // until they accept. pending_invite_count / declined_invite_count let the leader see whether the
+  // team is fully formed or still waiting on invitations (invited_by IS NOT NULL excludes join requests).
+  const { rows } = await pool.query(`SELECT t.*, tm.member_role, tm.status,
+      COUNT(other.user_id) FILTER (WHERE other.status = 'active')::int AS member_count,
+      COUNT(other.user_id) FILTER (WHERE other.status = 'invited' AND other.invited_by IS NOT NULL)::int AS pending_invite_count,
+      COUNT(other.user_id) FILTER (WHERE other.status = 'declined' AND other.invited_by IS NOT NULL)::int AS declined_invite_count
+    FROM teams t
+    JOIN team_members tm ON tm.team_id = t.id LEFT JOIN team_members other ON other.team_id = t.id
+    WHERE tm.user_id = $1 AND tm.status = 'active' GROUP BY t.id, tm.member_role, tm.status ORDER BY t.created_at DESC`, [req.user!.id]);
   res.json(rows);
 }));
 
@@ -71,9 +78,22 @@ teamsRoutes.get('/teams/invites/mine', authenticate, ah(async (req: AuthRequest,
   // invited_by IS NOT NULL excludes this student's own pending join-requests (see
   // /teams/:id/request-join) — those are awaiting the team leader's decision, not this
   // student's, and belong in /teams/:id/join-requests instead.
-  const { rows } = await pool.query(`SELECT t.id AS team_id, t.name, t.description, t.max_members FROM team_members tm
-    JOIN teams t ON t.id = tm.team_id WHERE tm.user_id = $1 AND tm.status = 'invited' AND tm.invited_by IS NOT NULL`, [req.user!.id]);
+  const { rows } = await pool.query(`SELECT t.id AS team_id, t.name, t.description, t.max_members,
+      inviter.full_name AS invited_by_name, inviter.institutional_id AS invited_by_institutional_id
+    FROM team_members tm JOIN teams t ON t.id = tm.team_id LEFT JOIN users inviter ON inviter.id = tm.invited_by
+    WHERE tm.user_id = $1 AND tm.status = 'invited' AND tm.invited_by IS NOT NULL ORDER BY t.created_at DESC`, [req.user!.id]);
   res.json(rows);
+}));
+
+// Resolves a register number to a student so the team creator can confirm who they're inviting
+// before sending. Matching is case-insensitive (24cs0063 == 24CS0063), like the roster import.
+teamsRoutes.get('/teams/member-lookup/:regNo', authenticate, allow('student'), ah(async (req: AuthRequest, res) => {
+  const student = (await pool.query(`SELECT u.id, u.institutional_id, u.full_name, sp.section FROM users u
+    LEFT JOIN student_profiles sp ON sp.user_id = u.id
+    WHERE upper(u.institutional_id) = upper($1) AND u.role = 'student'`, [req.params.regNo.trim()])).rows[0];
+  if (!student) return res.status(404).json({ error: `No student found with register number ${req.params.regNo.trim().toUpperCase()}.` });
+  if (student.id === req.user!.id) return res.status(400).json({ error: 'You are already the team leader — add your teammates instead.' });
+  res.json({ institutional_id: student.institutional_id, full_name: student.full_name, section: student.section ?? null });
 }));
 
 // Team detail (roster incl. emails): the team's own members/invitees, students browsing a public
@@ -87,7 +107,8 @@ teamsRoutes.get('/teams/:id', authenticate, ah(async (req: AuthRequest, res) => 
       OR ${STUDENT_DATA_ROLES.includes(viewer.role) ? teamInScopeSql(viewer.role, '$2', 't.id') : 'FALSE'})`,
     [req.params.id, viewer.id, viewer.role])).rows[0];
   if (!team) return res.status(404).json({ error: 'Team not found.' });
-  const { rows: members } = await pool.query(`SELECT tm.user_id, tm.member_role, tm.status, tm.joined_at, u.full_name, u.email
+  const { rows: members } = await pool.query(`SELECT tm.user_id, tm.member_role, tm.status, tm.joined_at, (tm.invited_by IS NOT NULL) AS was_invited,
+      u.full_name, u.email, u.institutional_id
     FROM team_members tm JOIN users u ON u.id = tm.user_id WHERE tm.team_id = $1 ORDER BY tm.member_role DESC, tm.joined_at ASC`, [req.params.id]);
   res.json({ ...team, members });
 }));
@@ -115,11 +136,17 @@ teamsRoutes.post('/teams/:id/invite', authenticate, allow('student'), ah(async (
   if (!team) return res.status(404).json({ error: 'Team not found.' });
   const isLeader = (await pool.query(`SELECT 1 FROM team_members WHERE team_id = $1 AND user_id = $2 AND member_role = 'leader'`, [req.params.id, req.user!.id])).rowCount;
   if (!isLeader) return res.status(403).json({ error: 'Only the team leader can invite members.' });
-  const invitee = (await pool.query(`SELECT id FROM users WHERE institutional_id = $1 AND role = 'student'`, [input.data.institutionalId])).rows[0];
-  if (!invitee) return res.status(404).json({ error: 'No student found with that institutional ID.' });
+  const invitee = (await pool.query(`SELECT u.id, tm.status AS membership_status FROM users u LEFT JOIN team_members tm ON tm.user_id = u.id AND tm.team_id = $2
+    WHERE upper(u.institutional_id) = upper($1) AND u.role = 'student'`, [input.data.institutionalId.trim(), team.id])).rows[0];
+  if (!invitee) return res.status(404).json({ error: 'No student found with that register number.' });
+  if (invitee.id === req.user!.id) return res.status(400).json({ error: 'You cannot invite yourself.' });
+  if (invitee.membership_status === 'active') return res.status(400).json({ error: 'This student is already on the team.' });
+  if (invitee.membership_status === 'invited') return res.status(400).json({ error: 'This student already has a pending invitation or request for this team.' });
+  const { rows: count } = await pool.query(`SELECT COUNT(*) FILTER (WHERE status = 'active' OR (status = 'invited' AND invited_by IS NOT NULL))::int AS n FROM team_members WHERE team_id = $1`, [team.id]);
+  if (count[0].n >= team.max_members) return res.status(400).json({ error: 'The team is full once pending invitations are counted.' });
   await pool.query(`INSERT INTO team_members (team_id, user_id, member_role, status, invited_by) VALUES ($1,$2,'member','invited',$3)
     ON CONFLICT (team_id, user_id) DO UPDATE SET status = 'invited', invited_by = $3`, [req.params.id, invitee.id, req.user!.id]);
-  await services.notifications.notify({ recipientId: invitee.id, type: 'team_invite', title: 'Team invitation', body: `You've been invited to join ${team.name}.`, actionUrl: '/teams' });
+  await notifyInvitee(invitee.id, team.name, (await studentName(req.user!.id)).full_name);
   await audit(req.user!.id, 'invite', 'team', team.id, { invitee: invitee.id });
   res.status(204).end();
 }));
@@ -127,6 +154,12 @@ teamsRoutes.post('/teams/:id/invite', authenticate, allow('student'), ah(async (
 teamsRoutes.post('/teams/:id/respond', authenticate, allow('student'), ah(async (req: AuthRequest, res) => {
   const input = z.object({ accept: z.boolean() }).safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: input.error.issues });
+  const team = (await pool.query('SELECT * FROM teams WHERE id = $1', [req.params.id])).rows[0];
+  if (!team) return res.status(404).json({ error: 'Invitation not found.' });
+  if (input.data.accept) {
+    const { rows: count } = await pool.query(`SELECT COUNT(*)::int AS n FROM team_members WHERE team_id = $1 AND status = 'active'`, [team.id]);
+    if (count[0].n >= team.max_members) return res.status(400).json({ error: 'This team is already full.' });
+  }
   const status = input.data.accept ? 'active' : 'declined';
   // $3 is cast explicitly in both spots: used bare, Postgres tries to unify one occurrence as
   // membership_status (from the SET target column) and the other as text (bare '=' comparison)
@@ -135,6 +168,18 @@ teamsRoutes.post('/teams/:id/respond', authenticate, allow('student'), ah(async 
   const result = await pool.query(`UPDATE team_members SET status = $3::membership_status, joined_at = CASE WHEN $3::text = 'active' THEN now() ELSE joined_at END
     WHERE team_id = $1 AND user_id = $2 AND status = 'invited' AND invited_by IS NOT NULL`, [req.params.id, req.user!.id, status]);
   if (!result.rowCount) return res.status(404).json({ error: 'Invitation not found.' });
+  await audit(req.user!.id, input.data.accept ? 'accept_invite' : 'decline_invite', 'team', team.id);
+  const leader = (await pool.query(`SELECT user_id FROM team_members WHERE team_id = $1 AND member_role = 'leader'`, [team.id])).rows[0];
+  if (leader) {
+    const me = await studentName(req.user!.id);
+    const who = `${me.full_name} (${me.institutional_id})`;
+    await services.notifications.notify({
+      recipientId: leader.user_id, type: 'team_invite',
+      title: input.data.accept ? 'Invitation accepted' : 'Invitation declined',
+      body: input.data.accept ? `${who} accepted your invitation and joined ${team.name}.` : `${who} declined your invitation to ${team.name}.`,
+      actionUrl: '/teams',
+    });
+  }
   res.status(204).end();
 }));
 
@@ -230,13 +275,50 @@ teamsRoutes.delete('/teams/:id', authenticate, allow('student'), ah(async (req: 
   res.status(204).end();
 }));
 
+// The creator becomes the active leader; everyone listed in memberIds (register numbers) gets an
+// invitation. The team only counts those members once they accept — until then the leader sees
+// their invitations as pending.
 teamsRoutes.post('/teams', authenticate, allow('student'), ah(async (req: AuthRequest, res) => {
-  const input = z.object({ name: z.string().min(2), description: z.string().max(2000).optional(), maxMembers: z.number().int().min(2).max(20), visibility: z.enum(['public', 'private']).default('public'), joinMode: z.enum(['invite', 'request', 'open']).default('invite'), domains: z.array(z.string()).default([]), techStack: z.array(z.string()).default([]) }).safeParse(req.body);
+  const input = z.object({ name: z.string().trim().min(2), description: z.string().max(2000).optional(), maxMembers: z.number().int().min(2).max(20), visibility: z.enum(['public', 'private']).default('public'), joinMode: z.enum(['invite', 'request', 'open']).default('invite'), domains: z.array(z.string()).default([]), techStack: z.array(z.string()).default([]), memberIds: z.array(z.string().trim().min(1)).max(19).default([]) }).safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: input.error.issues });
+  const x = input.data;
+  const regNos = [...new Set(x.memberIds.map((id) => id.toUpperCase()))];
+  if (regNos.length + 1 > x.maxMembers) return res.status(400).json({ error: `A team of ${x.maxMembers} can have at most ${x.maxMembers - 1} invited members besides you.` });
+  const { rows: invitees } = await pool.query<{ id: string; institutional_id: string }>(
+    `SELECT id, institutional_id FROM users WHERE upper(institutional_id) = ANY($1::text[]) AND role = 'student'`, [regNos]);
+  const found = new Set(invitees.map((u) => u.institutional_id.toUpperCase()));
+  const missing = regNos.filter((r) => !found.has(r));
+  if (missing.length) return res.status(400).json({ error: `No student found with register number ${missing.join(', ')}.` });
+  if (invitees.some((u) => u.id === req.user!.id)) return res.status(400).json({ error: 'You are added as the team leader automatically — remove your own register number.' });
+
   const client = await pool.connect();
-  try { await client.query('BEGIN'); const x = input.data;
-    const team = (await client.query('INSERT INTO teams (name, description, max_members, visibility, join_mode, domains, tech_stack, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *', [x.name, x.description ?? null, x.maxMembers, x.visibility, x.joinMode, x.domains, x.techStack, req.user!.id])).rows[0];
+  let team;
+  try { await client.query('BEGIN');
+    team = (await client.query('INSERT INTO teams (name, description, max_members, visibility, join_mode, domains, tech_stack, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *', [x.name, x.description ?? null, x.maxMembers, x.visibility, x.joinMode, x.domains, x.techStack, req.user!.id])).rows[0];
     await client.query("INSERT INTO team_members (team_id, user_id, member_role, status, joined_at) VALUES ($1,$2,'leader','active',now())", [team.id, req.user!.id]);
-    await client.query('COMMIT'); await audit(req.user!.id, 'create', 'team', team.id); res.status(201).json(team);
-  } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
+    for (const invitee of invitees) {
+      await client.query(`INSERT INTO team_members (team_id, user_id, member_role, status, invited_by) VALUES ($1,$2,'member','invited',$3)`, [team.id, invitee.id, req.user!.id]);
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    // 23505 = unique_violation on (name, created_by)
+    if ((error as { code?: string }).code === '23505') return res.status(409).json({ error: 'You already have a team with this name.' });
+    throw error;
+  } finally { client.release(); }
+  await audit(req.user!.id, 'create', 'team', team.id, { invited: invitees.map((u) => u.id) });
+  const inviterName = (await studentName(req.user!.id)).full_name;
+  for (const invitee of invitees) await notifyInvitee(invitee.id, team.name, inviterName);
+  res.status(201).json(team);
 }));
+
+async function studentName(userId: string): Promise<{ full_name: string; institutional_id: string }> {
+  return (await pool.query('SELECT full_name, institutional_id FROM users WHERE id = $1', [userId])).rows[0];
+}
+
+async function notifyInvitee(inviteeId: string, teamName: string, inviterName: string) {
+  await services.notifications.notify({
+    recipientId: inviteeId, type: 'team_invite', title: 'Team invitation',
+    body: `${inviterName} invited you to join ${teamName}. Accept or decline from your dashboard.`, actionUrl: '/teams',
+  });
+}

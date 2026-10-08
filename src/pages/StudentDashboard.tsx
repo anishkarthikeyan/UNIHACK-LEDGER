@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, CheckCircle2, Clock, Eye, AlertCircle, FileText, Loader2 } from 'lucide-react';
-import { api } from '../lib/api';
+import { Calendar, CheckCircle2, Clock, Eye, AlertCircle, FileText, Loader2, Users, Check, X } from 'lucide-react';
+import { api, ApiError } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import type { Hackathon, Notification, Registration } from '../types';
+import type { Hackathon, Notification, Registration, TeamInvite } from '../types';
 import type { NavigateFn } from '../App';
 
 interface StudentDashboardProps {
@@ -16,13 +16,32 @@ export default function StudentDashboard({ onNavigate }: StudentDashboardProps) 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [teamInvites, setTeamInvites] = useState<TeamInvite[]>([]);
+  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([api.hackathons.list(), api.registrations.mine(), api.notifications.list()])
       .then(([h, r, n]) => { setHackathons(h); setRegistrations(r); setNotifications(n); })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load dashboard.'))
       .finally(() => setLoading(false));
+    // Loaded separately so a failure here doesn't blank the rest of the dashboard.
+    api.teams.invitesMine().then(setTeamInvites).catch(() => { /* non-critical */ });
   }, []);
+
+  const respondToInvite = async (invite: TeamInvite, accept: boolean) => {
+    setRespondingInviteId(invite.team_id);
+    setInviteMessage(null);
+    try {
+      await api.teams.respond(invite.team_id, accept);
+      setTeamInvites((prev) => prev.filter((i) => i.team_id !== invite.team_id));
+      setInviteMessage(accept ? `You joined ${invite.name}.` : `Invitation to ${invite.name} declined.`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to respond to invitation.');
+    } finally {
+      setRespondingInviteId(null);
+    }
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center py-20 text-neutral-500"><Loader2 className="animate-spin" /></div>;
@@ -47,6 +66,52 @@ export default function StudentDashboard({ onNavigate }: StudentDashboardProps) 
       </div>
 
       {error && <p className="text-red-400 text-xs font-bold uppercase tracking-widest">{error}</p>}
+      {inviteMessage && <p className="text-green-500 text-xs font-bold uppercase tracking-widest">{inviteMessage}</p>}
+
+      {teamInvites.length > 0 && (
+        <div className="bg-black border-4 border-yellow-400/60 rounded-[32px] p-5 sm:p-6 space-y-4 shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-yellow-400/10 rounded-full flex items-center justify-center text-yellow-400 border border-yellow-400/30 shrink-0">
+              <Users size={22} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-black uppercase tracking-widest text-white">Team Invitation{teamInvites.length > 1 ? 's' : ''}</h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1">The team is formed only when you accept</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {teamInvites.map((invite) => (
+              <div key={invite.team_id} className="bg-neutral-900 border-2 border-neutral-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-black text-sm text-white break-words">{invite.name}</h3>
+                  {invite.invited_by_name && (
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 mt-1 break-words">
+                      From {invite.invited_by_name}{invite.invited_by_institutional_id ? ` (${invite.invited_by_institutional_id})` : ''}
+                    </p>
+                  )}
+                  {invite.description && <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1 break-words">{invite.description}</p>}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    disabled={respondingInviteId === invite.team_id}
+                    onClick={() => respondToInvite(invite, false)}
+                    className="px-4 py-2 rounded-full bg-black border border-neutral-700 text-red-400 text-[10px] font-black uppercase tracking-widest hover:bg-red-400 hover:text-white transition-colors disabled:opacity-60 flex items-center gap-1"
+                  >
+                    <X size={12} /> Decline
+                  </button>
+                  <button
+                    disabled={respondingInviteId === invite.team_id}
+                    onClick={() => respondToInvite(invite, true)}
+                    className="px-4 py-2 rounded-full bg-yellow-400 text-white text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform disabled:opacity-60 flex items-center gap-1"
+                  >
+                    {respondingInviteId === invite.team_id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Accept
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {urgentRegistration && (
         <div className="bg-red-500 rounded-[32px] p-5 sm:p-6 text-white border-4 border-red-600 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">

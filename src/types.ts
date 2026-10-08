@@ -200,6 +200,8 @@ export interface Team {
   member_role?: 'leader' | 'member';
   status?: string;
   member_count: number;
+  pending_invite_count?: number;
+  declined_invite_count?: number;
   members?: TeamMember[];
 }
 
@@ -235,8 +237,16 @@ export interface TeamMember {
   member_role: 'leader' | 'member';
   status: string;
   joined_at: string | null;
+  was_invited?: boolean;
   full_name: string;
   email: string;
+  institutional_id?: string;
+}
+
+export interface StudentLookup {
+  institutional_id: string;
+  full_name: string;
+  section: string | null;
 }
 
 export interface CreateTeamInput {
@@ -245,6 +255,7 @@ export interface CreateTeamInput {
   maxMembers: number;
   visibility?: 'public' | 'private';
   joinMode?: 'invite' | 'request' | 'open';
+  memberIds?: string[];
   domains?: string[];
   techStack?: string[];
 }
@@ -432,6 +443,8 @@ export interface TeamInvite {
   name: string;
   description: string | null;
   max_members: number;
+  invited_by_name: string | null;
+  invited_by_institutional_id: string | null;
 }
 
 export interface TeamDetail extends Omit<Team, 'member_count' | 'members'> {

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Users, CheckCircle2, Loader2 } from 'lucide-react';
+import { ChevronLeft, Users, CheckCircle2, Loader2, UserPlus, X, Shield, Send } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import type { StudentLookup } from '../types';
 import type { NavigateFn } from '../App';
 
 interface StudentTeamFormProps {
@@ -17,9 +19,41 @@ export default function StudentTeamForm({ onNavigate }: StudentTeamFormProps) {
   const [joinMode, setJoinMode] = useState<'invite' | 'request' | 'open'>('invite');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [memberInput, setMemberInput] = useState('');
+  const [members, setMembers] = useState<StudentLookup[]>([]);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const addMember = async () => {
+    const regNo = memberInput.trim().toUpperCase();
+    if (!regNo) return;
+    setMemberError(null);
+    if (members.some((m) => m.institutional_id.toUpperCase() === regNo)) { setMemberError(`${regNo} is already added.`); return; }
+    if (members.length + 1 >= maxMembers) { setMemberError(`A team of ${maxMembers} can have ${maxMembers - 1} members besides you. Increase Max Members to add more.`); return; }
+    setLookingUp(true);
+    try {
+      const student = await api.teams.lookupMember(regNo);
+      setMembers((prev) => [...prev, student]);
+      setMemberInput('');
+    } catch (err) {
+      setMemberError(err instanceof ApiError ? err.message : 'Could not find that student.');
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
+  const removeMember = (regNo: string) => setMembers((prev) => prev.filter((m) => m.institutional_id !== regNo));
+
+  const review = () => {
+    if (!name.trim()) { setError('Team name is required.'); return; }
+    if (members.length + 1 > maxMembers) { setError(`You've added more members than a team of ${maxMembers} allows.`); return; }
+    setError(null);
+    setConfirmOpen(true);
+  };
 
   const submit = async () => {
-    if (!name.trim()) { setError('Team name is required.'); return; }
     setSubmitting(true);
     setError(null);
     try {
@@ -31,9 +65,11 @@ export default function StudentTeamForm({ onNavigate }: StudentTeamFormProps) {
         joinMode,
         domains: domains.split(',').map((d) => d.trim()).filter(Boolean),
         techStack: techStack.split(',').map((d) => d.trim()).filter(Boolean),
+        memberIds: members.map((m) => m.institutional_id),
       });
       onNavigate?.('teams');
     } catch (err) {
+      setConfirmOpen(false);
       setError(err instanceof ApiError ? err.message : 'Failed to create team.');
     } finally {
       setSubmitting(false);
@@ -55,11 +91,11 @@ export default function StudentTeamForm({ onNavigate }: StudentTeamFormProps) {
         </div>
         <div className="flex gap-4">
           <button
-            onClick={submit}
+            onClick={review}
             disabled={submitting}
             className="px-6 py-4 bg-yellow-400 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform flex items-center justify-center gap-2 shadow-lg disabled:opacity-60"
           >
-            {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />} Save Team
+            <CheckCircle2 size={16} /> Create Team
           </button>
         </div>
       </div>
@@ -132,9 +168,68 @@ export default function StudentTeamForm({ onNavigate }: StudentTeamFormProps) {
             </div>
           </div>
 
-          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 px-2">
-            Once your team is created, invite members from the Teams page or share it as an open team.
-          </p>
+          <div className="bg-black rounded-[32px] border-4 border-neutral-800 p-8 space-y-5">
+            <div>
+              <h2 className="text-lg font-black uppercase tracking-widest text-white flex items-center gap-2">
+                <UserPlus size={18} className="text-yellow-400" /> Team Members
+              </h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-2">
+                Add teammates by register number. Each one gets an invitation and joins only after accepting.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={memberInput}
+                onChange={(e) => { setMemberInput(e.target.value); setMemberError(null); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMember(); } }}
+                placeholder="Register number, e.g. 24CS0063"
+                className="flex-1 min-w-0 px-4 py-3 bg-neutral-900 border-2 border-neutral-800 rounded-xl focus:border-yellow-400 outline-none text-sm text-white font-bold uppercase placeholder:normal-case transition-colors"
+              />
+              <button
+                onClick={addMember}
+                disabled={lookingUp || !memberInput.trim()}
+                className="px-5 py-3 bg-yellow-400 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform flex items-center gap-2 disabled:opacity-60 shrink-0"
+              >
+                {lookingUp ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />} Add
+              </button>
+            </div>
+            {memberError && <p className="text-red-400 text-[10px] font-bold uppercase tracking-widest">{memberError}</p>}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3 bg-neutral-900 border-2 border-neutral-800 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Shield size={14} className="text-yellow-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white break-words">{user?.full_name ?? 'You'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">{user?.institutional_id}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 shrink-0">Leader (you)</span>
+              </div>
+              {members.map((m) => (
+                <div key={m.institutional_id} className="flex items-center justify-between gap-3 bg-neutral-900 border-2 border-neutral-800 rounded-xl px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white break-words">{m.full_name}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                      {m.institutional_id}{m.section ? ` · Section ${m.section}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => removeMember(m.institutional_id)}
+                    className="w-8 h-8 rounded-full bg-black border border-neutral-700 flex items-center justify-center text-red-400 hover:bg-red-400 hover:text-white transition-colors shrink-0"
+                    aria-label={`Remove ${m.institutional_id}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+              {members.length + 1}/{maxMembers} slots filled
+            </p>
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -194,6 +289,64 @@ export default function StudentTeamForm({ onNavigate }: StudentTeamFormProps) {
           </div>
         </div>
       </div>
+
+      {confirmOpen && (
+        <div
+          onClick={() => !submitting && setConfirmOpen(false)}
+          className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md bg-neutral-900 border-2 border-neutral-800 rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <h2 className="text-lg font-black uppercase tracking-wider text-white">Confirm team</h2>
+            <p className="text-xs text-neutral-400 mt-2">
+              <span className="font-bold text-white">{name.trim()}</span> · up to {maxMembers} members
+            </p>
+
+            {members.length > 0 ? (
+              <>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-5 mb-2">Invitations will be sent to</p>
+                <div className="space-y-2">
+                  {members.map((m) => (
+                    <div key={m.institutional_id} className="flex items-center justify-between gap-3 bg-black border border-neutral-800 rounded-xl px-4 py-2.5">
+                      <p className="text-xs font-bold text-white break-words min-w-0">{m.full_name}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 shrink-0">{m.institutional_id}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 mt-4">
+                  They join the team only after accepting. Until then you'll see "Invitation pending".
+                </p>
+              </>
+            ) : (
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-5">
+                No members added — you can invite teammates later from My Teams.
+              </p>
+            )}
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setConfirmOpen(false)}
+                disabled={submitting}
+                className="flex-1 py-3 rounded-full bg-neutral-800 text-neutral-200 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-700 transition-colors disabled:opacity-60"
+              >
+                Back
+              </button>
+              <button
+                onClick={submit}
+                disabled={submitting}
+                className="flex-1 py-3 rounded-full bg-yellow-400 text-white text-[10px] font-black uppercase tracking-widest hover:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {members.length > 0 ? 'Confirm & send invites' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
